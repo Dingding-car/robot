@@ -37,4 +37,3 @@ public:
 	virtual void AfterUpdateAttitude(FLOAT inAngle, FLOAT inXRoll, FLOAT inYRoll) {};							  // 姿态信息更新
 	CVoyCmd *m_pCmd;																							  // 指令类对象指针
 };
-

@@ -11,26 +11,8 @@
 
 // 包含接口头文件
 #include "IBehavior.h"
-#include "IPhy.h"
+#include "SerialCom.h"
 
-// Linux兼容的机器人命令类
-class SerialCom;
-
-// Linux兼容的类型定义
-typedef unsigned char UCHAR;
-typedef unsigned short WORD;
-typedef unsigned int UINT;
-typedef int BOOL;
-typedef double DOUBLE;
-typedef float FLOAT;
-
-// Linux兼容的布尔值定义
-#ifndef TRUE
-#define TRUE 1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
 
 // 传感器常量
 #define ULTRASONICAMOUNT 24      // 超声波传感器数量

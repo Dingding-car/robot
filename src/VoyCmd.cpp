@@ -1,5 +1,4 @@
 #include "VoyCmd.h"
-#include "SerialCom.h"
 #include <cstring>
 #include <chrono>
 #include <thread>

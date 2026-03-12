@@ -7,7 +7,7 @@ Makefile
 *.cmake
 
 # 编译后的二进制文件
-robot_control
+bin/
 *.out
 
 # IDE 文件

@@ -1,5 +1,5 @@
-#include "base/SerialCom.h"
-#include "base/VoyCmd.h"
+#include "SerialCom.h"
+#include "VoyCmd.h"
 #include <iostream>
 #include <thread>
 #include <signal.h>
@@ -72,9 +72,7 @@ int main() {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
     
-    std::cout << "机器人控制CLI" << std::endl;
     std::cout << "=====================================" << std::endl;
-    std::cout << "集成传感器的综合机器人控制系统" << std::endl;
     
     // 创建串口通信对象
     SerialCom serial;
@@ -169,6 +167,7 @@ int main() {
                 if (!sensorsEnabled) {
                     std::cout << "启用传感器..." << std::endl;
                     voyCmd.AutoQueryUSonic(500);      // 每500ms查询超声波
+                    // behavior.AfterUpdateUSonic()
                     voyCmd.AutoQueryInfraRed(200);    // 每200ms查询红外
                     voyCmd.AutoQueryCompass(1000);    // 每1000ms查询罗盘
                     sensorsEnabled = true;
@@ -190,12 +189,6 @@ int main() {
                 } else {
                     std::cout << "传感器已经禁用了。" << std::endl;
                 }
-                break;
-                
-            case 'k':
-            case 'K':
-                std::cout << "执行踢球动作..." << std::endl;
-                voyCmd.Kick();
                 break;
                 
             case 'd':
