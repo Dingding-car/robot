@@ -1,7 +1,7 @@
 #include "SerialCom.h"
 
 // 构造函数
-SerialCom::SerialCom() {
+SerialCom::SerialCom() : IPhy() {
     m_hCom = -1;                    // 初始化串口句柄
     m_bRunning = false;             // 初始化运行状态
     m_bSending = false;             // 初始化发送状态

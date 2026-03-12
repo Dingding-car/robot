@@ -14,8 +14,14 @@
 #include <signal.h>
 #include <vector>
 
+// 包含接口头文件
+#include "IPhy.h"
+
+// 前向声明
+class CVoyCmd;
+
 // Linux兼容的串口通信类
-class SerialCom {
+class SerialCom : public IPhy {
 private:
     int m_hCom;                    // 串口句柄
     std::atomic<bool> m_bRunning;  // 运行状态标志

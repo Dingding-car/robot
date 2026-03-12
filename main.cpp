@@ -33,8 +33,8 @@ private:
 public:
     RobotBehavior(bool showSensorData = true) : m_cmd(nullptr), m_showSensorData(showSensorData) {}
 
-    void SetCmd(CVoyCmd* cmd) override {
-        m_cmd = cmd;
+    void SetCmd(CVoyCmd* pCmd) override {
+        m_cmd = pCmd;
     }
 
     void AfterUpdateUSonic(DOUBLE* distances, BOOL* enabled, UINT state) override {
@@ -53,7 +53,7 @@ public:
         if (!m_showSensorData) return;
         
         std::cout << "\n=== 红外传感器 ===" << std::endl;
-        for (int i = 0; i < INFRAREDMOUNT; i++) {
+        for (int i = 0; i < INFRAREDCHAR; i++) {
             if (enabled[i]) {
                 std::cout << "红外 " << i << ": " << (data[i] ? "检测到" : "未检测") << std::endl;
             }

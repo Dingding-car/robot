@@ -9,6 +9,10 @@
 #include <functional>
 #include <memory>
 
+// 包含接口头文件
+#include "IBehavior.h"
+#include "IPhy.h"
+
 // Linux兼容的机器人命令类
 class SerialCom;
 
@@ -43,19 +47,6 @@ typedef float FLOAT;
 #define LEFTFRONT 6              // 左前状态
 #define RIGHTBACK 7              // 右后状态
 #define LEFTBACK 8               // 左后状态
-
-// 前向声明
-class IBehavior;
-
-// 传感器数据回调接口
-class IBehavior {
-public:
-    virtual ~IBehavior() = default;
-    virtual void AfterUpdateUSonic(DOUBLE* distances, BOOL* enabled, UINT state) = 0;  // 超声波数据更新回调
-    virtual void AfterUpdateInfrared(UCHAR* data, BOOL* enabled, UINT state) = 0;      // 红外数据更新回调
-    virtual void AfterSendCommand(UCHAR* buffer, int length, UINT state) = 0;          // 发送命令回调
-    virtual void SetCmd(class CVoyCmd* cmd) = 0;                                       // 设置命令对象
-};
 
 class CVoyCmd {
 public:
