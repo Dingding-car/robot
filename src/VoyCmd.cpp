@@ -99,13 +99,33 @@ CVoyCmd::~CVoyCmd() {
 }
 
 // 线程函数
-void CVoyCmd::QueryUSonicThread() {
-    UINT startTime = QueryUSonicTime;
-    while (startTime == QueryUSonicTime && !bToEndThreads) {
-        QueryUltrasonicSensor();
-        std::this_thread::sleep_for(std::chrono::milliseconds(startTime));
+// 注意：Linux 线程函数原型固定为 void* (*)(void*)
+void CVoyCmd::QueryUSonicThread(void* pParam) 
+{
+    CVoyCmd* pcmd = (CVoyCmd*)pParam;
+    if (pcmd == nullptr) return;
+    
+    const UINT Time = pcmd->QueryUSonicTime;
+    
+    // 循环查询逻辑
+    while (Time == pcmd->QueryUSonicTime && FALSE == pcmd->bToEndThreads)
+    {
+        pcmd->QueryUltrasonicSensor(); // 单次查询
+        // 替换 Windows Sleep(ms) 为 Linux usleep(微秒)
+        usleep(Time * 1000); // 1毫秒 = 1000微秒
     }
+    
+    // return NULL; // Linux 线程返回 void* 类型
 }
+
+// void CVoyCmd::QueryUSonicThread(void* pParam) {
+//     CVoyCmd *pcmd = (CVoyCmd *)pParam;
+//     UINT startTime = QueryUSonicTime;
+//     while (startTime == QueryUSonicTime && !bToEndThreads) {
+//         pcmd->QueryUltrasonicSensor();
+//         std::this_thread::sleep_for(std::chrono::milliseconds(startTime));
+//     }
+// }
 
 void CVoyCmd::QueryInfraRedThread() {
     UINT startTime = QueryInfraRedTime;
@@ -181,7 +201,7 @@ void CVoyCmd::m_ParseFrame(UCHAR* buf, int length) {
                 m_pBeh->AfterUpdateUSonic(ValUSonic, EnableUSonic, nState);
             }
             break;
-        }
+            }
         case 0x34: { // 罗盘和陀螺仪响应
             WORD CmpsData;
             CmpsData = buf[5];
@@ -374,6 +394,15 @@ void CVoyCmd::QueryUltrasonicSensor() {
     for (int i = 0; i < 3; i++) {
         ultrasonicchar[i] = 0xff;
     }
+    
+    for (int i=0;i<24;i++)
+	{
+		if (EnableUSonic[i] == FALSE)
+		{
+			ultrasonicchar[2-i/8] &= ~(0x01<<(i%8));
+		}
+	}
+
     m_GenerateSendBuffer((UCHAR)0x02, 0, 3, (UCHAR)0x30, ultrasonicchar);
 }
 
@@ -403,7 +432,7 @@ void CVoyCmd::AutoQueryUSonic(UINT timeGap) {
         }
         
         // 启动新线程
-        m_usonicThread = new std::thread(&CVoyCmd::QueryUSonicThread, this);
+        m_usonicThread = new std::thread(&CVoyCmd::QueryUSonicThread, this, nullptr);
     } else {
         UCHAR sw = 0x00;
         m_GenerateSendBuffer(2, 0, 1, 0x31, &sw);

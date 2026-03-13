@@ -41,10 +41,15 @@ public:
         if (!m_showSensorData) return;
         
         std::cout << "\n=== 超声波传感器 ===" << std::endl;
+        bool hasData = false;
         for (int i = 0; i < ULTRASONICAMOUNT; i++) {
             if (enabled[i]) {
                 std::cout << "传感器 " << i << ": " << distances[i] << "m" << std::endl;
+                hasData = true;
             }
+        }
+        if (!hasData) {
+            std::cout << "未收到超声波传感器数据" << std::endl;
         }
         std::cout << "==========================" << std::endl;
     }
@@ -53,10 +58,15 @@ public:
         if (!m_showSensorData) return;
         
         std::cout << "\n=== 红外传感器 ===" << std::endl;
+        bool hasData = false;
         for (int i = 0; i < INFRAREDCHAR; i++) {
             if (enabled[i]) {
                 std::cout << "红外 " << i << ": " << (data[i] ? "检测到" : "未检测") << std::endl;
+                hasData = true;
             }
+        }
+        if (!hasData) {
+            std::cout << "未收到红外传感器数据" << std::endl;
         }
         std::cout << "========================" << std::endl;
     }
@@ -96,7 +106,7 @@ int main() {
     // 常用端口：0对应/dev/ttyUSB0，1对应/dev/ttyUSB1等
     if (!serial.Create(0)) {
         std::cerr << "打开串口失败" << std::endl;
-        return 1;
+            return 1;
     }
     
     std::cout << "\n串口通信已建立" << std::endl;
@@ -167,7 +177,6 @@ int main() {
                 if (!sensorsEnabled) {
                     std::cout << "启用传感器..." << std::endl;
                     voyCmd.AutoQueryUSonic(500);      // 每500ms查询超声波
-                    // behavior.AfterUpdateUSonic()
                     voyCmd.AutoQueryInfraRed(200);    // 每200ms查询红外
                     voyCmd.AutoQueryCompass(1000);    // 每1000ms查询罗盘
                     sensorsEnabled = true;
