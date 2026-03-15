@@ -1,10 +1,13 @@
-#include "SerialCom.h"
+#include "../include/SerialCom.h"
+#include "../include/VoyCmd.h"
+#include <iostream>
 
 // 构造函数
 SerialCom::SerialCom() : IPhy() {
     m_hCom = -1;                    // 初始化串口句柄
     m_bRunning = false;             // 初始化运行状态
     m_bSending = false;             // 初始化发送状态
+    m_pCmd = nullptr;               // 初始化指令类对象指针
     
     // 默认串口设置
     m_baudrate = B19200;            // 波特率19200
@@ -49,17 +52,17 @@ void SerialCom::SetComProp(int baudrate, int bytesize, int stopbits, int parity)
 }
 
 // 打开串口
-bool SerialCom::Create(int com) {
+BOOL SerialCom::Create(int inCom) {
     // 检查是否已在运行
     if (m_bRunning) {
         std::cerr << "串口已在运行中" << std::endl;
         return false;
     }
     
-    m_com = com;                    // 保存串口号
+    m_com = inCom;                    // 保存串口号
     
     // 构建设备路径
-    std::string devicePath = "/dev/ttyUSB" + std::to_string(com);
+    std::string devicePath = "/dev/ttyUSB" + std::to_string(inCom);
     
     // 打开串口
     m_hCom = open(devicePath.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
@@ -143,6 +146,14 @@ void SerialCom::Close() {
     }
 }
 
+// 设置指令类对象
+void SerialCom::SetCmd(CVoyCmd *pCmd) {
+    m_pCmd = pCmd;
+    if (m_pCmd != nullptr) {
+        m_pCmd->m_pPhy = this;
+    }
+}
+
 // 通过缓冲队列发送数据
 void SerialCom::Send(const void* pBuffer, int iLength) {
     if (!m_bRunning || !pBuffer || iLength <= 0) {
@@ -201,7 +212,10 @@ void SerialCom::ReceiveThread() {
             // 读取串口数据
             ssize_t bytesRead = read(m_hCom, buffer, sizeof(buffer));
             if (bytesRead > 0) {
-                ParseBuffer(buffer, bytesRead);
+                // 调用VoyCmd的Parse方法解析数据
+                if (m_pCmd != nullptr) {
+                    m_pCmd->Parse(buffer, bytesRead);
+                }
             }
         } else if (result < 0) {
             std::cerr << "select()函数出错" << std::endl;
@@ -266,13 +280,13 @@ void SerialCom::ParseBuffer(const unsigned char* buf, int length) {
         
         if (frameStart) {
             recvBuffer[recvIndex] = currentByte;
-            if (recvIndex == 1) {
+            if (recvIndex == 2) {
                 frameLength = (currentByte & 0x3F) + 4;
             }
             recvIndex++;
             
             // 接收到完整帧
-            if (recvIndex == frameLength) {
+            if (recvIndex == (frameLength + 2)) {
                 ParseFrame(recvBuffer, frameLength);
                 
                 // 重置为下一帧做准备
@@ -332,7 +346,7 @@ void SerialCom::ParseFrame(const unsigned char* buf, int length) {
 
 // 验证帧有效性
 bool SerialCom::IsValidFrame(const unsigned char* buf, int length) {
-    if (length < 6) return false;
+    // if (length < 6) return false;
     
     // 检查长度字段
     if ((buf[3] & 0x3F) != length - 4) {

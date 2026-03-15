@@ -11,13 +11,15 @@
 
 // 包含接口头文件
 #include "IBehavior.h"
-#include "SerialCom.h"
 
+// 前向声明
+class SerialCom;
 
 // 传感器常量
 #define ULTRASONICAMOUNT 24      // 超声波传感器数量
 #define INFRAREDCHAR 3           // 红外传感器字节数
 #define INFRAREDMOUNT 24         // 红外传感器数量
+#define MAX_BUF 1024             // 接受缓冲长度
 
 // 机器人状态
 #define STOP 0                   // 停止状态
@@ -85,6 +87,21 @@ public:
     UINT QueryInfraRedTime;                                         // 红外查询间隔
     UINT QueryCompassTime;                                          // 罗盘查询间隔
 
+    // Windows兼容的成员变量
+    BOOL m_bFrameStart;                                             // 指令解析首字符标记
+    UCHAR m_cLast;                                                  // 检验头两个字节用到的辅助变量
+    unsigned int m_nFrameLength;                                    // 当前指令长度
+    UINT nState;                                                    // 机器人状态标记
+    UCHAR* m_pRcvBuf;                                               // 数据接收缓冲
+    UCHAR* m_pSendBuf;                                              // 数据发送缓冲
+    unsigned int m_nSendlength;                                     // 已发送字节计数
+    unsigned int m_nRcvIndex;                                       // 已接收字节计数
+    float m_fLSpdCoe;                                               // 左电机速度系数
+    float m_fRSpdCoe;                                               // 右电机速度系数
+    FLOAT m_XRoll;                                                  // X滚转角
+    FLOAT m_YRoll;                                                  // Y滚转角
+    BYTE ValServMotor[8];                                           // 伺服电机转角
+
 private:
     // 线程函数
     void QueryUSonicThread(void* pParam);                           // 超声波查询线程
@@ -104,16 +121,6 @@ private:
     void m_ResetRcvBuf();                                           // 重置接收缓冲区
     DOUBLE m_CalDistance(UCHAR inUSChar);                           // 计算距离
     UCHAR m_CalSum(int length);                                     // 计算校验和
-    
-    // 缓冲区管理
-    UCHAR* m_pRcvBuf;                                               // 接收缓冲区
-    UCHAR* m_pSendBuf;                                              // 发送缓冲区
-    unsigned int m_nSendlength;                                     // 发送长度
-    unsigned int m_nRcvIndex;                                       // 接收索引
-    BOOL m_bFrameStart;                                             // 帧开始标志
-    UCHAR m_cLast;                                                  // 上一字节
-    unsigned int m_nFrameLength;                                    // 帧长度
-    UINT nState;                                                    // 当前状态
     
     // 线程管理
     std::thread* m_usonicThread;                                    // 超声波线程

@@ -39,7 +39,7 @@ public:
 
     void AfterUpdateUSonic(DOUBLE* distances, BOOL* enabled, UINT state) override {
         if (!m_showSensorData) return;
-        
+        // todo: 检查超声波传感器的返回值
         std::cout << "\n=== 超声波传感器 ===" << std::endl;
         bool hasData = false;
         for (int i = 0; i < ULTRASONICAMOUNT; i++) {
@@ -54,17 +54,28 @@ public:
         std::cout << "==========================" << std::endl;
     }
 
-    void AfterUpdateInfrared(UCHAR* data, BOOL* enabled, UINT state) override {
+    void AfterUpdateInfrared(BOOL* data, BOOL* enabled, UINT state) override {
         if (!m_showSensorData) return;
         
         std::cout << "\n=== 红外传感器 ===" << std::endl;
         bool hasData = false;
-        for (int i = 0; i < INFRAREDCHAR; i++) {
-            if (enabled[i]) {
-                std::cout << "红外 " << i << ": " << (data[i] ? "检测到" : "未检测") << std::endl;
-                hasData = true;
+        
+        // 8个一组打印输出，编号从24号降序到1号
+        for (int group = 0; group < INFRAREDMOUNT / 8; group++) {
+            std::cout << "第 " << (3 - group) << " 组 (传感器 "<< INFRAREDMOUNT - (group * 8 + 7) << 
+            "-" << INFRAREDMOUNT - (group * 8) << "):" << std::endl;
+            for (int i = 7; i >= 0; i--)
+            {
+                int sensorIndex = group * 8 + i;
+                if (enabled[sensorIndex]) {
+                    int sensorNumber = 24 - sensorIndex;
+                    std::cout << "  " << sensorNumber << ": " << (data[sensorIndex] ? "检测到障碍物" : "无障碍物");
+                    hasData = true;
+                }
             }
+            std::cout << std::endl << std::endl;
         }
+        
         if (!hasData) {
             std::cout << "未收到红外传感器数据" << std::endl;
         }
@@ -72,8 +83,13 @@ public:
     }
 
     void AfterSendCommand(UCHAR* buffer, int length, UINT state) override {
-        // 可选：显示发送的命令
+        // 输出完整的帧数据
         // std::cout << "Command sent, length: " << length << std::endl;
+        // std::cout << "发送帧数据: ";
+        // for (int i = 0; i < length; i++) {
+        //     std::cout << "0x" << std::hex << (int)buffer[i] << " ";
+        // }
+        // std::cout << std::dec << std::endl;
     }
 };
 
@@ -98,6 +114,7 @@ int main() {
     
     // 连接硬件
     voyCmd.m_pPhy = &serial;
+    serial.SetCmd(&voyCmd);
     
     // 配置串口
     serial.SetComProp(B19200, 8, 1, 0); // 19200波特率，8N1
@@ -122,7 +139,6 @@ int main() {
     std::cout << "  q - 退出" << std::endl;
     std::cout << "  t - 测试传感器（启用自动查询）" << std::endl;
     std::cout << "  x - 停止传感器（禁用自动查询）" << std::endl;
-    std::cout << "  k - 踢球动作" << std::endl;
     std::cout << "  d - 标定（陀螺仪校准）" << std::endl;
     std::cout << "\n按回车键开始..." << std::endl;
     std::cin.get();
@@ -176,9 +192,9 @@ int main() {
             case 'T':
                 if (!sensorsEnabled) {
                     std::cout << "启用传感器..." << std::endl;
-                    voyCmd.AutoQueryUSonic(500);      // 每500ms查询超声波
-                    voyCmd.AutoQueryInfraRed(200);    // 每200ms查询红外
-                    voyCmd.AutoQueryCompass(1000);    // 每1000ms查询罗盘
+                    // voyCmd.AutoQueryUSonic(500);      // 每500ms查询超声波
+                    voyCmd.AutoQueryInfraRed(500);    // 每200ms查询红外
+                    // voyCmd.AutoQueryCompass(1000);    // 每1000ms查询罗盘
                     sensorsEnabled = true;
                     std::cout << "传感器已启用。数据将自动显示。" << std::endl;
                 } else {

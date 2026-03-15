@@ -1,8 +1,10 @@
 #include "VoyCmd.h"
+#include "SerialCom.h"
 #include <cstring>
 #include <chrono>
 #include <thread>
 #include <iostream>
+#include <bitset>
 
 // 构造函数
 CVoyCmd::CVoyCmd() {
@@ -17,7 +19,7 @@ CVoyCmd::CVoyCmd() {
 
     // 初始化传感器数据
     for (int i = 0; i < ULTRASONICAMOUNT; i++) {
-        ValUSonic[i] = 1.0;
+        ValUSonic[i] = 0;
         EnableUSonic[i] = TRUE;
         EnableInfrared[i] = TRUE;
     }
@@ -27,8 +29,8 @@ CVoyCmd::CVoyCmd() {
     }
     
     // 初始化缓冲区
-    m_pRcvBuf = new UCHAR[1024];
-    m_pSendBuf = new UCHAR[256];
+    m_pRcvBuf = new UCHAR[MAX_BUF];
+    m_pSendBuf = new UCHAR[MAX_BUF];
     m_nRcvIndex = 0;
     m_nSendlength = 0;
     
@@ -36,6 +38,10 @@ CVoyCmd::CVoyCmd() {
     nState = STOP;
     m_iLspeed = m_iRspeed = 0;
     m_angle = 0.0f;
+    m_fLSpdCoe = 1.0f;
+    m_fRSpdCoe = 1.0f;
+    m_XRoll = 0.0f;
+    m_YRoll = 0.0f;
     
     // 初始化硬件指针
     m_pPhy = nullptr;
@@ -52,6 +58,16 @@ CVoyCmd::CVoyCmd() {
     m_usonicThread = nullptr;
     m_infraredThread = nullptr;
     m_compassThread = nullptr;
+    
+    // 初始化Windows兼容变量
+    m_bFrameStart = FALSE;
+    m_cLast = 0;
+    m_nFrameLength = 0;
+    
+    // 初始化伺服电机转角
+    for (int i = 0; i < 8; i++) {
+        ValServMotor[i] = 90;
+    }
     
     // 重置缓冲区
     m_ResetRcvBuf();
@@ -157,7 +173,7 @@ void CVoyCmd::m_ParseBuffer(const UCHAR buf) {
     if (buf == (UCHAR)0xaa && m_cLast == (UCHAR)0x55 && !m_bFrameStart) {
         m_pRcvBuf[0] = 0x55;
         m_pRcvBuf[1] = 0xAA;
-        m_bFrameStart = true;
+        m_bFrameStart = TRUE;
         return;
     }
     
@@ -176,7 +192,7 @@ void CVoyCmd::m_ParseBuffer(const UCHAR buf) {
         }
         
         // 缓冲区溢出保护
-        if (m_nRcvIndex >= 1024) {
+        if (m_nRcvIndex >= MAX_BUF) {
             m_ResetRcvBuf();
         }
     } else {
@@ -213,6 +229,8 @@ void CVoyCmd::m_ParseFrame(UCHAR* buf, int length) {
         case 0x36: { // 红外传感器响应
             for (int i = 0; i < INFRAREDCHAR; i++) {
                 m_charInfrared[i] = buf[i + 3];
+                // std::cout << "[红外调试] 第 " << i << " 字节原始值: 0x" << std::hex << (int)m_charInfrared[i] 
+                // << "  二进制: " << std::bitset<8>((int)m_charInfrared[i]) << std::endl;
                 for (int j = 7; j >= 0; j--) {
                     if ((m_charInfrared[i] & 0x01) == 0x01) {
                         ValInfrared[j + 8 * i] = false;
@@ -225,7 +243,8 @@ void CVoyCmd::m_ParseFrame(UCHAR* buf, int length) {
             }
             
             if (m_pBeh != nullptr) {
-                m_pBeh->AfterUpdateInfrared(m_charInfrared, EnableInfrared, nState);
+                // m_pBeh->AfterUpdateInfrared(m_charInfrared, EnableInfrared, nState);
+                m_pBeh->AfterUpdateInfrared(ValInfrared, EnableInfrared, nState);
             }
             break;
         }
@@ -246,15 +265,15 @@ void CVoyCmd::m_ParseFrame(UCHAR* buf, int length) {
 }
 
 void CVoyCmd::m_ResetRcvBuf() {
-    memset(m_pRcvBuf, 0, 1024);
+    memset(m_pRcvBuf, 0, MAX_BUF);
     m_nRcvIndex = 0;
-    m_bFrameStart = false;
+    m_bFrameStart = FALSE;
     m_cLast = 0x00;
     m_nFrameLength = 0;
 }
 
 void CVoyCmd::m_ResetSendBuf() {
-    memset(m_pSendBuf, 0, 256);
+    memset(m_pSendBuf, 0, MAX_BUF);
     m_nSendlength = 0;
 }
 

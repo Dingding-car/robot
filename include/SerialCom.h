@@ -43,6 +43,7 @@ private:
     };
     
     std::vector<CMDBUF> m_cmdlist;  // 命令队列
+    CMDBUF* m_pTempCmd;             // 发送指令缓冲成员临时指针
     
     // 线程函数
     void ReceiveThread();  // 接收线程
@@ -62,15 +63,19 @@ public:
     SerialCom();   // 构造函数
     ~SerialCom();  // 析构函数
     
-    bool Create(int com);                                    // 打开串口
+    void SetComProp(int baudrate, int bytesize, int stopbits, int parity);  // 设置串口属性
+    BOOL Create(int inCom);                                    // 打开串口
     void Close();                                            // 关闭串口
+    void SetCmd(CVoyCmd *pCmd);                              // 设置指令类对象
     void Send(const void* pBuffer, int iLength);             // 通过缓冲队列发送数据
     void ComSend(const void* pBuffer, int iLength);          // 直接发送数据
-    void SetComProp(int baudrate, int bytesize, int stopbits, int parity);  // 设置串口属性
     
     // 状态管理
     void SetRunning(bool running) { m_bRunning = running; }  // 设置运行状态
     bool IsRunning() const { return m_bRunning; }            // 获取运行状态
+    
+    // Windows兼容的成员变量
+    CVoyCmd* m_pCmd;                                         // 指令类对象指针
 };
 
 #endif // SERIALCOM_H
