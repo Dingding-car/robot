@@ -17,13 +17,32 @@ CVoyCmd::CVoyCmd() {
     EnableInfrared = new BOOL[INFRAREDMOUNT];
     ValInfrared = new BOOL[INFRAREDMOUNT];
 
+    
     // 初始化传感器数据
     for (int i = 0; i < ULTRASONICAMOUNT; i++) {
         ValUSonic[i] = 0;
-        EnableUSonic[i] = TRUE;
-        EnableInfrared[i] = TRUE;
+        EnableUSonic[i] = FALSE;
+        EnableInfrared[i] = FALSE;
     }
     
+    // 传感器编号列表（你要开启的超声波传感器）
+    const int usonicEnableList[] = {1, 4, 13, 16, 19, 22};
+    const int usonicEnableCount = sizeof(usonicEnableList) / sizeof(usonicEnableList[0]);  
+
+    // 批量开启指定超声波传感器
+    for (int i = 0; i < usonicEnableCount; i++) {
+        int index = 24 - usonicEnableList[i];  // 转数组下标
+        EnableUSonic[index] = TRUE;
+        EnableInfrared[index] = TRUE;       // 同步关闭红外（逻辑更清晰）
+}
+    // // note:只开启6个传感器
+    // EnableUSonic[24-1] = TRUE;
+    // EnableUSonic[24-4] = TRUE;
+    // EnableUSonic[24-13] = TRUE;
+    // EnableUSonic[24-16] = TRUE;
+    // EnableUSonic[24-19] = TRUE;
+    // EnableUSonic[24-22] = TRUE;
+
     for (int i = 0; i < INFRAREDMOUNT; i++) {
         ValInfrared[i] = FALSE;
     }
@@ -116,32 +135,31 @@ CVoyCmd::~CVoyCmd() {
 
 // 线程函数
 // 注意：Linux 线程函数原型固定为 void* (*)(void*)
-void CVoyCmd::QueryUSonicThread(void* pParam) 
-{
-    CVoyCmd* pcmd = (CVoyCmd*)pParam;
-    if (pcmd == nullptr) return;
+// void CVoyCmd::QueryUSonicThread(void* pParam) 
+// {
+//     CVoyCmd* pcmd = (CVoyCmd*)pParam;
+//     if (pcmd == nullptr) return;
     
-    const UINT Time = pcmd->QueryUSonicTime;
+//     const UINT Time = pcmd->QueryUSonicTime;
     
-    // 循环查询逻辑
-    while (Time == pcmd->QueryUSonicTime && FALSE == pcmd->bToEndThreads)
-    {
-        pcmd->QueryUltrasonicSensor(); // 单次查询
-        // 替换 Windows Sleep(ms) 为 Linux usleep(微秒)
-        usleep(Time * 1000); // 1毫秒 = 1000微秒
-    }
-    
-    // return NULL; // Linux 线程返回 void* 类型
-}
-
-// void CVoyCmd::QueryUSonicThread(void* pParam) {
-//     CVoyCmd *pcmd = (CVoyCmd *)pParam;
-//     UINT startTime = QueryUSonicTime;
-//     while (startTime == QueryUSonicTime && !bToEndThreads) {
-//         pcmd->QueryUltrasonicSensor();
-//         std::this_thread::sleep_for(std::chrono::milliseconds(startTime));
+//     // 循环查询逻辑
+//     while (Time == pcmd->QueryUSonicTime && FALSE == pcmd->bToEndThreads)
+//     {
+//         pcmd->QueryUltrasonicSensor(); // 单次查询
+//         // 替换 Windows Sleep(ms) 为 Linux usleep(微秒)
+//         usleep(Time * 1000); // 1毫秒 = 1000微秒
 //     }
+    
+//     // return NULL; // Linux 线程返回 void* 类型
 // }
+
+void CVoyCmd::QueryUSonicThread() {
+    UINT startTime = QueryUSonicTime;
+    while (startTime == QueryUSonicTime && !bToEndThreads) {
+        QueryUltrasonicSensor();
+        std::this_thread::sleep_for(std::chrono::milliseconds(startTime));
+    }
+}
 
 void CVoyCmd::QueryInfraRedThread() {
     UINT startTime = QueryInfraRedTime;
@@ -451,7 +469,7 @@ void CVoyCmd::AutoQueryUSonic(UINT timeGap) {
         }
         
         // 启动新线程
-        m_usonicThread = new std::thread(&CVoyCmd::QueryUSonicThread, this, nullptr);
+        m_usonicThread = new std::thread(&CVoyCmd::QueryUSonicThread, this);
     } else {
         UCHAR sw = 0x00;
         m_GenerateSendBuffer(2, 0, 1, 0x31, &sw);

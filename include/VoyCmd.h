@@ -104,7 +104,7 @@ public:
 
 private:
     // 线程函数
-    void QueryUSonicThread(void* pParam);                           // 超声波查询线程
+    void QueryUSonicThread();                                       // 超声波查询线程
     void QueryInfraRedThread();                                     // 红外查询线程
     void QueryCompassThread();                                      // 罗盘查询线程
     

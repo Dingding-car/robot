@@ -39,12 +39,12 @@ public:
 
     void AfterUpdateUSonic(DOUBLE* distances, BOOL* enabled, UINT state) override {
         if (!m_showSensorData) return;
-        // todo: 检查超声波传感器的返回值
         std::cout << "\n=== 超声波传感器 ===" << std::endl;
+        std::cout << "传感器:" << std::endl;
         bool hasData = false;
         for (int i = 0; i < ULTRASONICAMOUNT; i++) {
             if (enabled[i]) {
-                std::cout << "传感器 " << i << ": " << distances[i] << "m" << std::endl;
+                std::cout << 24 - i << "号: " << distances[i] << "m" << std::endl;
                 hasData = true;
             }
         }
@@ -192,8 +192,8 @@ int main() {
             case 'T':
                 if (!sensorsEnabled) {
                     std::cout << "启用传感器..." << std::endl;
-                    // voyCmd.AutoQueryUSonic(500);      // 每500ms查询超声波
-                    voyCmd.AutoQueryInfraRed(500);    // 每200ms查询红外
+                    voyCmd.AutoQueryUSonic(200);      // 每500ms查询超声波
+                    // voyCmd.AutoQueryInfraRed(500);    // 每200ms查询红外
                     // voyCmd.AutoQueryCompass(1000);    // 每1000ms查询罗盘
                     sensorsEnabled = true;
                     std::cout << "传感器已启用。数据将自动显示。" << std::endl;
