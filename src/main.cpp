@@ -58,22 +58,15 @@ public:
         if (!m_showSensorData) return;
         
         std::cout << "\n=== 红外传感器 ===" << std::endl;
+        std::cout << "传感器:" << std::endl;
         bool hasData = false;
-        
+
         // 8个一组打印输出，编号从24号降序到1号
-        for (int group = 0; group < INFRAREDMOUNT / 8; group++) {
-            std::cout << "第 " << (3 - group) << " 组 (传感器 "<< INFRAREDMOUNT - (group * 8 + 7) << 
-            "-" << INFRAREDMOUNT - (group * 8) << "):" << std::endl;
-            for (int i = 7; i >= 0; i--)
-            {
-                int sensorIndex = group * 8 + i;
-                if (enabled[sensorIndex]) {
-                    int sensorNumber = 24 - sensorIndex;
-                    std::cout << "  " << sensorNumber << ": " << (data[sensorIndex] ? "检测到障碍物" : "无障碍物");
-                    hasData = true;
-                }
+        for (int i = 0; i < INFRAREDMOUNT; i++) { 
+            if (enabled[i]) {
+                std::cout << 24 - i << "号: " << (data[i] ? "检测到障碍物" : "无障碍物") << std::endl;
+                hasData = true;
             }
-            std::cout << std::endl << std::endl;
         }
         
         if (!hasData) {
@@ -192,9 +185,9 @@ int main() {
             case 'T':
                 if (!sensorsEnabled) {
                     std::cout << "启用传感器..." << std::endl;
-                    voyCmd.AutoQueryUSonic(200);      // 每500ms查询超声波
-                    // voyCmd.AutoQueryInfraRed(500);    // 每200ms查询红外
-                    // voyCmd.AutoQueryCompass(1000);    // 每1000ms查询罗盘
+                    voyCmd.AutoQueryUSonic(200);      // 超声波查询间隔(ms)
+                    voyCmd.AutoQueryInfraRed(200);    // 红外查询间隔(ms)
+                    // voyCmd.AutoQueryCompass(1000);    // 罗盘查询间隔(ms)
                     sensorsEnabled = true;
                     std::cout << "传感器已启用。数据将自动显示。" << std::endl;
                 } else {
@@ -229,7 +222,7 @@ int main() {
                 break;
                 
             default:
-                std::cout << "未知命令。使用 f/b/l/r/s/w/q/t/x/k/d" << std::endl;
+                std::cout << "未知命令。" << std::endl;
                 break;
         }
         
