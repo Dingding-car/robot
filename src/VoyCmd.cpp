@@ -341,6 +341,8 @@ void CVoyCmd::Brake(UCHAR breakmode) {
     nState = STOP;
 }
 
+// 电机转速设置(单位：RPM)
+// 输出轴转速要➗齿轮减速比 15
 void CVoyCmd::SetBothMotorsSpeed(int leftSpeed, int rightSpeed) {
     if (leftSpeed == m_iLspeed && rightSpeed == m_iRspeed) {
         return;
@@ -349,6 +351,7 @@ void CVoyCmd::SetBothMotorsSpeed(int leftSpeed, int rightSpeed) {
     m_iLspeed = leftSpeed;
     m_iRspeed = rightSpeed;
     
+    // DEC -> HEX
     WORD left = m_CalculateSpeed(leftSpeed);
     WORD right = m_CalculateSpeed(rightSpeed);
     

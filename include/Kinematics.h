@@ -35,7 +35,7 @@ public:
     void KinematicsInverse(float linear_speed, float angular_speed, float* out_left_rotation_speed, float* out_right_rotation_speed);
 
     // 更新电机速度
-    void UpdateMotorSpeed(float left_motor_speed, float right_motor_speed);
+    void UpdateMotorSpeed(float dt,float left_motor_speed, float right_motor_speed);
     // 获取电机速度
     float GetMotorSpeed(int motor_id);
     // 设置轮距
@@ -46,7 +46,7 @@ public:
     // 获取里程计信息
     odem_t &GetOdem();
     // 更新里程计信息
-    void UpdataOdem(float dt);
+    void m_UpdataOdem(float dt);
     // 角度转换
     void m_TransAngleInPi(float angle, float &out_angle);
 };

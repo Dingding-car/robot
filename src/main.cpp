@@ -2,13 +2,14 @@
 #include <thread>
 #include <signal.h>
 #include <chrono>
+#include <termios.h>
+#include <unistd.h>
+#include <cmath>
+#include <iomanip>
+
 #include "SerialCom.h"
 #include "VoyCmd.h"
 #include "Kinematics.h"
-#include <termios.h>
-#include <unistd.h>
-
-#include <cmath>
 
 
 SerialCom* g_serial = nullptr;
@@ -16,7 +17,7 @@ CVoyCmd* g_voyCmd = nullptr;
 Kinematics kinematics;
 
 float target_linear_speed = 0.1; // 目标线速度，单位：米/秒
-float target_angular_speed = 1;  // 目标角速度，单位：弧度/秒
+float target_angular_speed = 0;  // 目标角速度，单位：弧度/秒
 float out_left_speed = 0.0f;  // 输出左轮速度，单位：弧度/秒
 float out_right_speed = 0.0f; // 输出右轮速度，单位：
 
@@ -38,7 +39,9 @@ int main(){
     
     // 配置串口
     serial.SetComProp(B19200, 8, 1, 0); // 19200波特率，8N1
-    
+
+    std::cout << "=====================================" << std::endl;
+
     // 打开串口（根据需要更改端口号）
     // 常用端口：0对应/dev/ttyUSB0，1对应/dev/ttyUSB1等
     if (!serial.Create(0)) {
@@ -59,7 +62,7 @@ int main(){
     kinematics.KinematicsInverse(target_linear_speed, target_angular_speed, &out_left_speed, &out_right_speed);
     
     // 将计算得到的电机速度设置到 kinematics 的 motor_param 结构体中
-    kinematics.UpdateMotorSpeed(out_left_speed, out_right_speed);
+    kinematics.UpdateMotorSpeed(0, out_left_speed, out_right_speed);
     
     std::cout << "目标线速度: " << target_linear_speed << " m/s" << " 目标角速度: " << target_angular_speed << " rad/s" << std::endl;
     std::cout << "计算得到的左轮速度：" << kinematics.GetMotorSpeed(0) << " rpm" << std::endl;
@@ -68,6 +71,7 @@ int main(){
     std::cout << "\n按回车键开始..." << std::endl;
     std::cin.get();
 
+    // 键盘读取
     // 设置终端为非阻塞模式
     struct termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
@@ -77,23 +81,49 @@ int main(){
     newt.c_cc[VTIME] = 0; // 无超时
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    std::cout << "机器人运动中...按任意键停止" << std::endl;
+    std::cout << "机器人运动中...按任意键停止（10秒后自动退出）" << std::endl;
     
-    bool running = true;
-    while(running){
-        // 检查是否有键盘输入
+    // 主循环
+    bool IsRunning = true;
+    auto loop_start_time = std::chrono::system_clock::now(); // 记录循环开始时间
+    while(IsRunning){
+        
+        // 开始时间
+        auto current_time = std::chrono::system_clock::now();
+        
+        // 定时退出
+        std::chrono::duration<float> elapsed = current_time - loop_start_time;
+        if (elapsed.count() >= 10.0f) {
+            IsRunning = false;
+            std::cout << "已运行10秒，自动停止运动..." << std::endl;
+        }
+            
+        // 手动退出
         char ch;
         if (read(STDIN_FILENO, &ch, 1) > 0) {
-            running = false;
+            IsRunning = false;
             std::cout << "检测到按键，停止运动..." << std::endl;
         }
         
         // 设置电机速度
         voyCmd.SetBothMotorsSpeed(static_cast<int>(out_left_speed), static_cast<int>(out_right_speed));
-        std::cout << "正在运动... 左轮速度: " << out_left_speed << " rpm, 右轮速度: " << out_right_speed << " rpm" << std::endl;
+        // std::cout << "正在运动... 左轮速度: " << out_left_speed << " rpm, 右轮速度: " << out_right_speed << " rpm" << std::endl;
         
         // 添加延时，避免CPU占用过高
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        
+        // 计算循环耗时
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<float> duration_Second = end - current_time;
+        auto dt = duration_Second.count(); // 循环耗时，单位：秒
+
+        // 更新速度和里程计
+        kinematics.UpdateMotorSpeed(dt, out_left_speed, out_right_speed);
+        
+        std::cout << std::fixed << std::setprecision(3); // 设置输出格式为固定小数点，保留3位小数
+        // std::cout << "里程计信息 - 线速度: " << kinematics.GetOdem().linear_speed << " m/s, 角速度: " << kinematics.GetOdem().angular_speed << " rad/s" << std::endl;
+        std::cout << "里程计信息 - 位置: (" << kinematics.GetOdem().x << ", " << kinematics.GetOdem().y << "), 角度: " << kinematics.GetOdem().angle << " rad" << std::endl;
+
     }
 
     // 恢复终端设置

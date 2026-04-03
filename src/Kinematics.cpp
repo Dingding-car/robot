@@ -21,12 +21,12 @@ void Kinematics::KinematicsInverse(float linear_speed, float angular_speed, floa
 }
 
 // 更新电机速度
-void Kinematics::UpdateMotorSpeed(float left_motor_speed, float right_motor_speed){
+void Kinematics::UpdateMotorSpeed(float dt, float left_motor_speed, float right_motor_speed){
 
     motor_param[0].motor_speed = left_motor_speed;
     motor_param[1].motor_speed = right_motor_speed;
+    this->m_UpdataOdem(dt);
 }
-
 
 // 获取电机速度
 float Kinematics::GetMotorSpeed(int motor_id){
@@ -59,7 +59,7 @@ void Kinematics::m_TransAngleInPi(float angle, float &out_angle){
 }
 
 // 更新里程计信息
-void Kinematics::UpdataOdem(float dt) {
+void Kinematics::m_UpdataOdem(float dt) {
     // todo: 更新里程计信息的实现
     float dt_s = dt; // 单位：秒
     this->KinematicsForward(motor_param[0].motor_speed, motor_param[1].motor_speed, &odem.linear_speed, &odem.angular_speed);
