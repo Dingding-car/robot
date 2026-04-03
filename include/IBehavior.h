@@ -28,9 +28,8 @@ class IBehavior
 public:
 	IBehavior() { m_pCmd = NULL; };
 	virtual ~IBehavior() {};
-	virtual void SetCmd(CVoyCmd *pCmd) { m_pCmd = pCmd; };														  // 设置指令类对象
-	// virtual void AfterUpdateInfrared(UCHAR *Infrared, BOOL *EnableIR, UINT nState) {};							  // 红外传感器信息更新后的处理函数
-	virtual void AfterUpdateInfrared(BOOL *Infrared, BOOL *EnableIR, UINT nState) {};
+	virtual void SetCmd(CVoyCmd *pCmd) { m_pCmd = pCmd; };														  // 设置指令类对象						  
+	virtual void AfterUpdateInfrared(BOOL *Infrared, BOOL *EnableIR, UINT nState) {};							  // 红外传感器信息更新后的处理函数
 	virtual void AfterUpdateUSonic(DOUBLE *Ultrasonic, BOOL *EnableUS, UINT nState) {};							  // 超声传感器信息更新后的处理函数
 	virtual void AfterUpdateVideoSample(BYTE *pBuffer, long lWidth, long lHeight, double dbTime, UINT nState) {}; // 主前视摄像装置接收到一桢图象后的处理函数
 	virtual void AfterUpdateOverlook(BYTE *pBuffer, long lWidth, long lHeight, double dbTime, UINT nState) {};	  // 全局摄像装置接收到一桢图象后的处理函数

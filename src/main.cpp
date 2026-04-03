@@ -1,98 +1,29 @@
-#include "SerialCom.h"
-#include "VoyCmd.h"
 #include <iostream>
 #include <thread>
 #include <signal.h>
 #include <chrono>
+#include "SerialCom.h"
+#include "VoyCmd.h"
+#include "Kinematics.h"
+#include <termios.h>
+#include <unistd.h>
 
-// 全局对象用于信号处理
+#include <cmath>
+
+
 SerialCom* g_serial = nullptr;
 CVoyCmd* g_voyCmd = nullptr;
+Kinematics kinematics;
 
-// 清洁关闭的信号处理器
-void signalHandler(int signal) {
-    std::cout << "\n接收到信号 " << signal << "，正在关闭..." << std::endl;
-    if (g_voyCmd) {
-        g_voyCmd->bToEndThreads = TRUE;
-        g_voyCmd->AutoQueryUSonic(0);
-        g_voyCmd->AutoQueryInfraRed(0);
-        g_voyCmd->AutoQueryCompass(0);
-    }
-    if (g_serial) {
-        g_serial->SetRunning(false);
-    }
-    exit(0);
-}
+float target_linear_speed = 0.1; // 目标线速度，单位：米/秒
+float target_angular_speed = 1;  // 目标角速度，单位：弧度/秒
+float out_left_speed = 0.0f;  // 输出左轮速度，单位：弧度/秒
+float out_right_speed = 0.0f; // 输出右轮速度，单位：
 
-// 传感器数据显示的行为实现
-class RobotBehavior : public IBehavior {
-private:
-    CVoyCmd* m_cmd;
-    bool m_showSensorData;
+float wheel_distance = 0.46;      // 轮距，单位：米
+float wheel_radius = 0.21 * 0.5; // 轮半径，单位：米
 
-public:
-    RobotBehavior(bool showSensorData = true) : m_cmd(nullptr), m_showSensorData(showSensorData) {}
-
-    void SetCmd(CVoyCmd* pCmd) override {
-        m_cmd = pCmd;
-    }
-
-    void AfterUpdateUSonic(DOUBLE* distances, BOOL* enabled, UINT state) override {
-        if (!m_showSensorData) return;
-        std::cout << "\n=== 超声波传感器 ===" << std::endl;
-        std::cout << "传感器:" << std::endl;
-        bool hasData = false;
-        for (int i = 0; i < ULTRASONICAMOUNT; i++) {
-            if (enabled[i]) {
-                std::cout << 24 - i << "号: " << distances[i] << "m" << std::endl;
-                hasData = true;
-            }
-        }
-        if (!hasData) {
-            std::cout << "未收到超声波传感器数据" << std::endl;
-        }
-        std::cout << "==========================" << std::endl;
-    }
-
-    void AfterUpdateInfrared(BOOL* data, BOOL* enabled, UINT state) override {
-        if (!m_showSensorData) return;
-        
-        std::cout << "\n=== 红外传感器 ===" << std::endl;
-        std::cout << "传感器:" << std::endl;
-        bool hasData = false;
-
-        // 8个一组打印输出，编号从24号降序到1号
-        for (int i = 0; i < INFRAREDMOUNT; i++) { 
-            if (enabled[i]) {
-                std::cout << 24 - i << "号: " << (data[i] ? "检测到障碍物" : "无障碍物") << std::endl;
-                hasData = true;
-            }
-        }
-        
-        if (!hasData) {
-            std::cout << "未收到红外传感器数据" << std::endl;
-        }
-        std::cout << "========================" << std::endl;
-    }
-
-    void AfterSendCommand(UCHAR* buffer, int length, UINT state) override {
-        // 输出完整的帧数据
-        // std::cout << "Command sent, length: " << length << std::endl;
-        // std::cout << "发送帧数据: ";
-        // for (int i = 0; i < length; i++) {
-        //     std::cout << "0x" << std::hex << (int)buffer[i] << " ";
-        // }
-        // std::cout << std::dec << std::endl;
-    }
-};
-
-int main() {
-    // 设置信号处理器
-    signal(SIGINT, signalHandler);
-    signal(SIGTERM, signalHandler);
-    
-    std::cout << "=====================================" << std::endl;
-    
+int main(){
     // 创建串口通信对象
     SerialCom serial;
     g_serial = &serial;
@@ -100,11 +31,7 @@ int main() {
     // 创建机器人命令对象
     CVoyCmd voyCmd;
     g_voyCmd = &voyCmd;
-    
-    // 设置传感器数据显示行为
-    RobotBehavior behavior(true);
-    voyCmd.SetBehavior(&behavior);
-    
+
     // 连接硬件
     voyCmd.m_pPhy = &serial;
     serial.SetCmd(&voyCmd);
@@ -121,125 +48,60 @@ int main() {
     
     std::cout << "\n串口通信已建立" << std::endl;
     std::cout << "机器人控制系统就绪" << std::endl;
+
+
+
+    // 设置轮距和轮半径
+    kinematics.SetWheelDistance(wheel_distance);
+    kinematics.SetWheelRadius(wheel_radius);
+
+    // 计算运动学逆解
+    kinematics.KinematicsInverse(target_linear_speed, target_angular_speed, &out_left_speed, &out_right_speed);
     
-    std::cout << "\n命令：" << std::endl;
-    std::cout << "  f - 前进" << std::endl;
-    std::cout << "  b - 后退" << std::endl;
-    std::cout << "  l - 左转" << std::endl;
-    std::cout << "  r - 右转" << std::endl;
-    std::cout << "  s - 停止" << std::endl;
-    std::cout << "  w - 慢速前进（测试用）" << std::endl;
-    std::cout << "  q - 退出" << std::endl;
-    std::cout << "  t - 测试传感器（启用自动查询）" << std::endl;
-    std::cout << "  x - 停止传感器（禁用自动查询）" << std::endl;
-    std::cout << "  d - 标定（陀螺仪校准）" << std::endl;
+    // 将计算得到的电机速度设置到 kinematics 的 motor_param 结构体中
+    kinematics.UpdateMotorSpeed(out_left_speed, out_right_speed);
+    
+    std::cout << "目标线速度: " << target_linear_speed << " m/s" << " 目标角速度: " << target_angular_speed << " rad/s" << std::endl;
+    std::cout << "计算得到的左轮速度：" << kinematics.GetMotorSpeed(0) << " rpm" << std::endl;
+    std::cout << "计算得到的右轮速度：" << kinematics.GetMotorSpeed(1) << " rpm" << std::endl;
+
     std::cout << "\n按回车键开始..." << std::endl;
     std::cin.get();
+
+    // 设置终端为非阻塞模式
+    struct termios oldt, newt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO); // 关闭规范模式和回显
+    newt.c_cc[VMIN] = 0;  // 非阻塞读取
+    newt.c_cc[VTIME] = 0; // 无超时
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+    std::cout << "机器人运动中...按任意键停止" << std::endl;
     
-    char command;
     bool running = true;
-    bool sensorsEnabled = false;
-    
-    while (running && serial.IsRunning()) {
-        std::cout << "\n命令: ";
-        std::cin >> command;
-        
-        switch (command) {
-            case 'f':
-            case 'F':
-                std::cout << "前进中..." << std::endl;
-                voyCmd.SetBothMotorsSpeed(1000, 1000); // 以速度1000前进
-                break;
-                
-            case 'b':
-            case 'B':
-                std::cout << "后退中..." << std::endl;
-                voyCmd.SetBothMotorsSpeed(-1000, -1000); // 以速度1000后退
-                break;
-                
-            case 'l':
-            case 'L':
-                std::cout << "左转中..." << std::endl;
-                voyCmd.SetBothMotorsSpeed(-500, 500); // 左转
-                break;
-                
-            case 'r':
-            case 'R':
-                std::cout << "右转中..." << std::endl;
-                voyCmd.SetBothMotorsSpeed(500, -500); // 右转
-                break;
-                
-            case 'w':
-            case 'W':
-                std::cout << "慢速前进中..." << std::endl;
-                voyCmd.SetBothMotorsSpeed(300, 300); // 测试用慢速前进
-                break;
-                
-            case 's':
-            case 'S':
-                std::cout << "停止中..." << std::endl;
-                voyCmd.Brake(1); // 紧急停止
-                break;
-                
-            case 't':
-            case 'T':
-                if (!sensorsEnabled) {
-                    std::cout << "启用传感器..." << std::endl;
-                    voyCmd.AutoQueryUSonic(200);      // 超声波查询间隔(ms)
-                    voyCmd.AutoQueryInfraRed(200);    // 红外查询间隔(ms)
-                    // voyCmd.AutoQueryCompass(1000);    // 罗盘查询间隔(ms)
-                    sensorsEnabled = true;
-                    std::cout << "传感器已启用。数据将自动显示。" << std::endl;
-                } else {
-                    std::cout << "传感器已经启用了。" << std::endl;
-                }
-                break;
-                
-            case 'x':
-            case 'X':
-                if (sensorsEnabled) {
-                    std::cout << "禁用传感器..." << std::endl;
-                    voyCmd.AutoQueryUSonic(0);
-                    voyCmd.AutoQueryInfraRed(0);
-                    voyCmd.AutoQueryCompass(0);
-                    sensorsEnabled = false;
-                    std::cout << "传感器已禁用。" << std::endl;
-                } else {
-                    std::cout << "传感器已经禁用了。" << std::endl;
-                }
-                break;
-                
-            case 'd':
-            case 'D':
-                std::cout << "标定中（陀螺仪校准）..." << std::endl;
-                voyCmd.Demarcate();
-                break;
-                
-            case 'q':
-            case 'Q':
-                std::cout << "退出中..." << std::endl;
-                running = false;
-                break;
-                
-            default:
-                std::cout << "未知命令。" << std::endl;
-                break;
+    while(running){
+        // 检查是否有键盘输入
+        char ch;
+        if (read(STDIN_FILENO, &ch, 1) > 0) {
+            running = false;
+            std::cout << "检测到按键，停止运动..." << std::endl;
         }
         
-        // 小延迟以防止串口过载
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // 设置电机速度
+        voyCmd.SetBothMotorsSpeed(static_cast<int>(out_left_speed), static_cast<int>(out_right_speed));
+        std::cout << "正在运动... 左轮速度: " << out_left_speed << " rpm, 右轮速度: " << out_right_speed << " rpm" << std::endl;
+        
+        // 添加延时，避免CPU占用过高
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
+
+    // 恢复终端设置
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     
-    // 清洁关闭
-    if (sensorsEnabled) {
-        voyCmd.AutoQueryUSonic(0);
-        voyCmd.AutoQueryInfraRed(0);
-        voyCmd.AutoQueryCompass(0);
-    }
-    voyCmd.bToEndThreads = TRUE;
-    serial.SetRunning(false);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-    std::cout << "\n程序成功终止" << std::endl;
+    // 停止电机
+    voyCmd.SetBothMotorsSpeed(0, 0);
+    std::cout << "机器人已停止" << std::endl;
+
     return 0;
 }

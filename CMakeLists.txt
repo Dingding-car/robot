@@ -19,6 +19,14 @@ add_executable(
     ${SRC_LIST}
 )
 
+# list(REMOVE_ITEM SRC_LIST ${PROJECT_SOURCE_DIR}/src/main.cpp)
+
+# add_executable(test_kinematics
+#     test_kinematics.cpp
+#     ${SRC_LIST}  # 这里已经没有 main.cpp 了
+# )
+
 
 # 链接库
 target_link_libraries(robot_control pthread)
+# target_link_libraries(test_kinematics pthread)
