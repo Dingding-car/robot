@@ -7,6 +7,10 @@ project(RobotControl)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# 查找ROOT库
+find_package(ROOT REQUIRED COMPONENTS Core RIO Net Hist Graf Graf3d Gpad)
+include(${ROOT_USE_FILE})
+
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 
@@ -28,5 +32,8 @@ add_executable(
 
 
 # 链接库
-target_link_libraries(robot_control pthread)
+target_link_libraries(robot_control
+    pthread
+    ${ROOT_LIBRARIES}
+)
 # target_link_libraries(test_kinematics pthread)

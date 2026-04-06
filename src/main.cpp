@@ -10,19 +10,23 @@
 #include "SerialCom.h"
 #include "VoyCmd.h"
 #include "Kinematics.h"
+#include "GridMap.h"
 
 
 SerialCom* g_serial = nullptr;
 CVoyCmd* g_voyCmd = nullptr;
 Kinematics kinematics;
 
-float target_linear_speed = 0.1; // 目标线速度，单位：米/秒
+// note:设定目标速度和角速度
+float target_linear_speed = 0.2; // 目标线速度，单位：米/秒
 float target_angular_speed = 0;  // 目标角速度，单位：弧度/秒
 float out_left_speed = 0.0f;  // 输出左轮速度，单位：弧度/秒
 float out_right_speed = 0.0f; // 输出右轮速度，单位：
 
 float wheel_distance = 0.46;      // 轮距，单位：米
 float wheel_radius = 0.21 * 0.5; // 轮半径，单位：米
+
+bool is_show_map = false; // 是否显示地图（终端和ROOT）
 
 int main(){
     // 创建串口通信对象
@@ -58,6 +62,9 @@ int main(){
     kinematics.SetWheelDistance(wheel_distance);
     kinematics.SetWheelRadius(wheel_radius);
 
+    // 创建地图
+    GridMap map(0.1f, 3.0f, 3.0f); // 分辨率0.1m，地图大小3m x 3m
+
     // 计算运动学逆解
     kinematics.KinematicsInverse(target_linear_speed, target_angular_speed, &out_left_speed, &out_right_speed);
     
@@ -92,6 +99,7 @@ int main(){
         auto current_time = std::chrono::system_clock::now();
         
         // 定时退出
+        // note:设定自动退出时间
         std::chrono::duration<float> elapsed = current_time - loop_start_time;
         if (elapsed.count() >= 10.0f) {
             IsRunning = false;
@@ -106,8 +114,7 @@ int main(){
         }
         
         // 设置电机速度
-        voyCmd.SetBothMotorsSpeed(static_cast<int>(out_left_speed), static_cast<int>(out_right_speed));
-        // std::cout << "正在运动... 左轮速度: " << out_left_speed << " rpm, 右轮速度: " << out_right_speed << " rpm" << std::endl;
+        voyCmd.SetBothMotorsSpeed(static_cast<int>(kinematics.GetMotorSpeed(0)), static_cast<int>(kinematics.GetMotorSpeed(1)));
         
         // 添加延时，避免CPU占用过高
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -122,8 +129,27 @@ int main(){
         
         std::cout << std::fixed << std::setprecision(3); // 设置输出格式为固定小数点，保留3位小数
         // std::cout << "里程计信息 - 线速度: " << kinematics.GetOdem().linear_speed << " m/s, 角速度: " << kinematics.GetOdem().angular_speed << " rad/s" << std::endl;
-        std::cout << "里程计信息 - 位置: (" << kinematics.GetOdem().x << ", " << kinematics.GetOdem().y << "), 角度: " << kinematics.GetOdem().angle << " rad" << std::endl;
+        // std::cout << "里程计信息 - 位置: (" << kinematics.GetOdem().x << ", " << kinematics.GetOdem().y << "), 角度: " << kinematics.GetOdem().angle << " rad" << std::endl;
 
+        // 机器人全局坐标与超声数据
+        float robot_x = kinematics.GetOdem().x;    // 机器人坐标
+        float robot_y = kinematics.GetOdem().y;
+        float robot_yaw = kinematics.GetOdem().angle;  // 朝向0°
+        float distance = 1.0f;  // 超声测到障碍物 1米
+
+        // 3. 超声更新：波束角【固定15°】
+        map.UpdateByUltrasonic(robot_x, robot_y, robot_yaw, distance, 15.0f);
+
+    }
+    if(is_show_map){
+        
+        // 终端打印地图
+        map.PrintMap();
+    
+        // 使用 ROOT 可视化栅格地图
+        std::cout << "\n正在生成 ROOT 栅格地图可视化..." << std::endl;
+        map.PrintMapROOT("gridmap_root.png");
+        std::cout << "栅格地图已保存到: /bin/gridmap_root.png" << std::endl;
     }
 
     // 恢复终端设置
