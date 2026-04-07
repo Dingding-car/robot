@@ -159,23 +159,3 @@ void GridMap::PrintMapROOT(const char* output_file) {
     delete hist;
     delete c1;
 }
-
-// // ==================== 主函数测试 ====================
-// int main() {
-//     // 1. 创建地图：【手动设置分辨率 0.1m】，地图 4m × 4m
-//     GridMap map(0.1f, 4.0f, 4.0f);
-
-//     // 2. 模拟机器人与超声数据
-//     float robot_x = 2.0f;    // 机器人坐标
-//     float robot_y = 2.0f;
-//     float robot_yaw = 0.0f;  // 朝向0°
-//     float distance = 1.0f;  // 超声测到障碍物 1米
-
-//     // 3. 超声更新：波束角【固定15°】
-//     map.updateByUltrasonic(robot_x, robot_y, robot_yaw, distance, 15.0f);
-
-//     // 4. 打印地图
-//     map.printMap();
-
-//     return 0;
-// }

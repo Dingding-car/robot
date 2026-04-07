@@ -11,6 +11,7 @@
 #include "VoyCmd.h"
 #include "Kinematics.h"
 #include "GridMap.h"
+#include "RobotBehavior.h"
 
 
 SerialCom* g_serial = nullptr;
@@ -36,6 +37,11 @@ int main(){
     // 创建机器人命令对象
     CVoyCmd voyCmd;
     g_voyCmd = &voyCmd;
+
+    // 设置传感器数据显示行为
+    RobotBehavior sensorBehavior(true);
+    voyCmd.SetBehavior(&sensorBehavior);
+    sensorBehavior.SetShowSensor(false); // 关闭传感器数据显示
 
     // 连接硬件
     voyCmd.m_pPhy = &serial;
