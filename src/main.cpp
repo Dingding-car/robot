@@ -128,8 +128,9 @@ int main()
         }
 
         // 设置电机速度
-        voyCmd.SetBothMotorsSpeed(static_cast<int>(kinematics.GetMotorSpeed(0)),
-                                  static_cast<int>(kinematics.GetMotorSpeed(1)));
+        int left_speed_rpm = static_cast<int>(kinematics.GetMotorSpeed(0));
+        int right_speed_rpm = static_cast<int>(kinematics.GetMotorSpeed(1));
+        voyCmd.SetBothMotorsSpeed(left_speed_rpm, right_speed_rpm);
 
         // 添加延时，避免CPU占用过高
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -142,13 +143,9 @@ int main()
         // 更新速度和里程计
         kinematics.UpdateMotorSpeed(dt, out_left_speed, out_right_speed);
 
-        std::cout << std::fixed
-                  << std::setprecision(3); // 设置输出格式为固定小数点，保留3位小数
-        // std::cout << "里程计信息 - 线速度: " << kinematics.GetOdem().linear_speed
-        // << " m/s, 角速度: " << kinematics.GetOdem().angular_speed << " rad/s" <<
-        // std::endl; std::cout << "里程计信息 - 位置: (" << kinematics.GetOdem().x
-        // << ", " << kinematics.GetOdem().y << "), 角度: " <<
-        // kinematics.GetOdem().angle << " rad" << std::endl;
+        std::cout << std::fixed << std::setprecision(3); // 设置输出格式为固定小数点，保留3位小数
+        // std::cout << "里程计信息 - 线速度: " << kinematics.GetOdem().linear_speed << " m/s, 角速度: " << kinematics.GetOdem().angular_speed << " rad/s" <<std::endl;
+        // std::cout << "里程计信息 - 位置: (" << kinematics.GetOdem().x << ", " << kinematics.GetOdem().y << "), 角度: " << kinematics.GetOdem().angle << " rad" << std::endl;
 
         // 机器人全局坐标与超声数据
         // todo: 这里使用了假数据，实际应用中应使用从传感器获取的距离值
@@ -176,13 +173,12 @@ int main()
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
     // 等待线程完全停止
-    // std::this_thread::sleep_for(std::chrono::milliseconds(250));
     voyCmd.AutoQueryLMotorParam(0);
     voyCmd.AutoQueryRMotorParam(0);
 
     // 停止所有线程和运动
-    voyCmd.SetBothMotorsSpeed(0, 0);
-    // voyCmd.Brake(0x01); // 刹车模式1：快速刹车
+    // voyCmd.SetBothMotorsSpeed(0, 0);
+    voyCmd.Brake(1); // 刹车模式1：快速刹车
 
     std::cout << "机器人已停止，所有线程已终止" << std::endl;
 

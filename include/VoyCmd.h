@@ -156,7 +156,7 @@ private:
     std::thread* m_motorLParamThread;                                   // 左电机参数线程
     std::thread* m_motorRParamThread;                                   // 右电机参数线程
     std::atomic<bool> m_running;                                    // 运行标志
-    std::mutex m_outputMutex;                                        // 输出同步锁
+    std::mutex m_sendMutex;
 };
 
 #endif // VOYCMD_H

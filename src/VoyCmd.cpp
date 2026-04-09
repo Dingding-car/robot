@@ -298,17 +298,13 @@ void CVoyCmd::m_ParseFrame(UCHAR *buf, int length) {
     m_pos = pos;
 
     // 解析 2 字节速度（小端序）
-    const char *sign = ((int16_t)buf[7] & 0x80) ? "-" : "+";
-    int16_t speed_higher = ((int16_t)buf[7] & 0x7F) << 8; // 速度高位
+    // const char *sign = ((int16_t)buf[7] & 0x80) ? "-" : "+";
+    // int16_t speed_higher = ((int16_t)buf[7] & 0x7F) << 8; // 速度高位
+    int16_t speed_higher = ((int16_t)buf[7]) << 8; // 速度高位（包含符号位）
     int16_t speed_lower = (int16_t)buf[8];                // 速度低位
     m_speed = (speed_higher | speed_lower);
-
-    {
-        std::lock_guard<std::mutex> lock(m_outputMutex);
-        std::cout << "[电机调试] 位置: " << m_pos << " 速度: " << sign << m_speed
-                  << std::endl;
-    }
-    // std::cout << std::dec;
+        // std::cout << "[电机调试] 位置: " << m_pos << " 速度: " << sign << m_speed
+        //           << std::endl;
     if (m_pBeh != nullptr) {
         m_pBeh->AfterUpdateMotorParam(m_pos, m_speed, nState);
     }
@@ -435,6 +431,7 @@ void CVoyCmd::SetBothMotorsSpeed(int leftSpeed, int rightSpeed) {
   bothspeed[2] = (UCHAR)((right >> 8) & 0x00ff);
   bothspeed[3] = (UCHAR)(right & 0x00ff);
 
+  std::lock_guard<std::mutex> lock(m_sendMutex);
   m_GenerateSendBuffer((UCHAR)0x01, 0, 4, (UCHAR)0x26, bothspeed);
   m_UpdateState();
 }
@@ -660,6 +657,7 @@ void CVoyCmd::AutoQueryLMotorParam(UINT timeGap) {
     }
 
     // 启动新线程
+    std::lock_guard<std::mutex> lock(m_sendMutex);
     m_motorLParamThread =
         new std::thread(&CVoyCmd::QueryLMotorParamThread, this);
   } else {
@@ -692,6 +690,7 @@ void CVoyCmd::AutoQueryRMotorParam(UINT timeGap) {
     }
 
     // 启动新线程
+    std::lock_guard<std::mutex> lock(m_sendMutex);
     m_motorRParamThread =
         new std::thread(&CVoyCmd::QueryRMotorParamThread, this);
   } else {

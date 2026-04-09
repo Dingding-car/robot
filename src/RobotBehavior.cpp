@@ -70,3 +70,10 @@ SensorData_t& RobotBehavior::GetSensorData() {
     return m_ultraSonicData;
 }
 
+void RobotBehavior::AfterUpdateMotorParam(UINT pos, UINT speed, UINT state) {
+    // 这里可以添加对电机参数更新的处理逻辑，例如打印电机状态
+    const char* sign = (speed & 0x8000) ? "-" : "+"; // 判断速度符号
+    int out_speed = speed & 0x7FFF; // 获取速度
+    // std::cout << "[电机调试]位置: " << pos << " 速度: " << sign << out_speed << std::endl;
+}
+

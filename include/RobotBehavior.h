@@ -24,6 +24,7 @@ public:
     void SetCmd(CVoyCmd *pCmd) override;
     void AfterUpdateUSonic(DOUBLE *distances, BOOL *enabled, UINT state) override;
     void AfterUpdateInfrared(BOOL *data, BOOL *enabled, UINT state) override;
+    void AfterUpdateMotorParam(UINT pos, UINT speed, UINT state) override;
     void AfterSendCommand(UCHAR *buffer, int length, UINT state) override;
 
     SensorData_t& GetSensorData();
