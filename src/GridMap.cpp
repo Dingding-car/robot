@@ -133,7 +133,6 @@ void GridMap::PrintMapROOT(const char* output_file) {
             hist->SetBinContent(x + 1, y + 1, val);
         }
     }
-    
     // 设置可视化选项
     hist->SetStats(0);  // 不显示统计信息
     hist->SetMinimum(-2.0f);  // 设置最小值
@@ -142,7 +141,6 @@ void GridMap::PrintMapROOT(const char* output_file) {
     // 设置颜色调色板
     gStyle->SetPalette(kRainBow);
     // hist->SetContour(1000);  // 颜色平滑过渡
-    
     // 绘制
     hist->Draw("COL");
     

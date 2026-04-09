@@ -1,6 +1,9 @@
 // IBehavior.h: interface for the IBehavior class.
 //
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+
+#ifndef IBEHAVIOR_H
+#define IBEHAVIOR_H
 
 #include <cstddef>  // 用于 NULL 定义
 
@@ -31,9 +34,12 @@ public:
 	virtual void SetCmd(CVoyCmd *pCmd) { m_pCmd = pCmd; };														  // 设置指令类对象						  
 	virtual void AfterUpdateInfrared(BOOL *Infrared, BOOL *EnableIR, UINT nState) {};							  // 红外传感器信息更新后的处理函数
 	virtual void AfterUpdateUSonic(DOUBLE *Ultrasonic, BOOL *EnableUS, UINT nState) {};							  // 超声传感器信息更新后的处理函数
+	virtual void AfterUpdateMotorParam(UINT pos, UINT speed, UINT nState) {};									  // 电机参数更新后的处理函数
 	virtual void AfterUpdateVideoSample(BYTE *pBuffer, long lWidth, long lHeight, double dbTime, UINT nState) {}; // 主前视摄像装置接收到一桢图象后的处理函数
 	virtual void AfterUpdateOverlook(BYTE *pBuffer, long lWidth, long lHeight, double dbTime, UINT nState) {};	  // 全局摄像装置接收到一桢图象后的处理函数
 	virtual void AfterSendCommand(BYTE *pBuffer, int iLength, UINT nState) {};									  // 发送指令完毕后的处理函数
 	virtual void AfterUpdateAttitude(FLOAT inAngle, FLOAT inXRoll, FLOAT inYRoll) {};							  // 姿态信息更新
 	CVoyCmd *m_pCmd;																							  // 指令类对象指针
 };
+
+#endif // IBEHAVIOR_H

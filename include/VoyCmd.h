@@ -6,19 +6,21 @@
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <mutex>
 #include <functional>
 #include <memory>
 
 // 包含接口头文件
 #include "IBehavior.h"
+#include "RobotConfig.h"
 
 // 前向声明
 class SerialCom;
 
 // 传感器常量
-#define ULTRASONICAMOUNT 24      // 超声波传感器数量
-#define INFRAREDCHAR 3           // 红外传感器字节数
-#define INFRAREDMOUNT 24         // 红外传感器数量
+// #define ULTRASONICAMOUNT 24      // 超声波传感器数量
+// #define INFRAREDCHAR 3           // 红外传感器字节数
+// #define INFRAREDMOUNT 24         // 红外传感器数量
 #define MAX_BUF 1024             // 接受缓冲长度
 
 // 机器人状态
@@ -31,6 +33,13 @@ class SerialCom;
 #define LEFTFRONT 6              // 左前状态
 #define RIGHTBACK 7              // 右后状态
 #define LEFTBACK 8               // 左后状态
+                                 
+// 电机类型
+enum EMotorType
+{
+    MOTOR_LEFT  = 0x01,
+    MOTOR_RIGHT = 0x02
+};
 
 class CVoyCmd {
 public:
@@ -47,17 +56,24 @@ public:
     void QueryUltrasonicSensor();                                   // 查询超声波传感器
     void QueryInfrared();                                           // 查询红外传感器
     void QueryCompass();                                            // 查询罗盘
-    
+    void QueryMotorParam(EMotorType motorType);                    // 查询电机参数
+    void QueryLMotorParam();
+    void QueryRMotorParam();
+
     // 自动查询方法
     void AutoQueryUSonic(UINT timeGap);                             // 自动查询超声波
     void AutoQueryInfraRed(UINT timeGap);                           // 自动查询红外
     void AutoQueryCompass(UINT timeGap);                            // 自动查询罗盘
-    
-    // 高级控制方法
+    void AutoQueryMotorParam(EMotorType motorType, UINT timeGap); // 自动查询电机参数
+    void AutoQueryLMotorParam(UINT timeGap);
+    void AutoQueryRMotorParam(UINT timeGap);
+
+
+/*     // 高级控制方法
     void SpeedByGyro(int speed);                                    // 陀螺仪直行
     void CircleByGyro(int angle, int speed);                        // 陀螺仪转向
     void Kick();                                                    // 踢球动作
-    void Demarcate();                                               // 陀螺仪标定
+    void Demarcate();                                               // 陀螺仪标 */
     
     // 状态管理
     UINT GetState() const { return nState; }                        // 获取当前状态
@@ -77,6 +93,10 @@ public:
     BOOL* ValInfrared;                                              // 红外检测值
     FLOAT m_angle;                                                  // 罗盘角度
     
+    // 电机数据
+    UINT m_pos;
+    UINT m_speed;
+
     // 控制参数
     int m_iLspeed;                                                  // 左电机速度
     int m_iRspeed;                                                  // 右电机速度
@@ -86,6 +106,9 @@ public:
     UINT QueryUSonicTime;                                           // 超声波查询间隔
     UINT QueryInfraRedTime;                                         // 红外查询间隔
     UINT QueryCompassTime;                                          // 罗盘查询间隔
+    UINT QueryMotorParamTime;                                        // 电机参数查询间隔
+    UINT QueryLMotorParamTime;                                        // 左电机参数查询间隔
+    UINT QueryRMotorParamTime;                                        // 右电机参数查询间隔
 
     // Windows兼容的成员变量
     BOOL m_bFrameStart;                                             // 指令解析首字符标记
@@ -107,6 +130,9 @@ private:
     void QueryUSonicThread();                                       // 超声波查询线程
     void QueryInfraRedThread();                                     // 红外查询线程
     void QueryCompassThread();                                      // 罗盘查询线程
+    void QueryMotorParamThread(EMotorType motorType);              // 电机参数查询线程
+    void QueryLMotorParamThread();                                      // 左电机参数查询线程
+    void QueryRMotorParamThread();                                      // 右电机参数查询线程
     
     // 辅助方法
     void m_UpdateState();                                           // 更新状态
@@ -126,7 +152,11 @@ private:
     std::thread* m_usonicThread;                                    // 超声波线程
     std::thread* m_infraredThread;                                  // 红外线程
     std::thread* m_compassThread;                                   // 罗盘线程
+    std::thread* m_motorParamThread;                                   // 电机参数线程
+    std::thread* m_motorLParamThread;                                   // 左电机参数线程
+    std::thread* m_motorRParamThread;                                   // 右电机参数线程
     std::atomic<bool> m_running;                                    // 运行标志
+    std::mutex m_outputMutex;                                        // 输出同步锁
 };
 
 #endif // VOYCMD_H

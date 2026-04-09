@@ -2,7 +2,7 @@
 #define __ROBOTBEHAVIOR_H__
 
 #include "IBehavior.h"
-#include "RobotConfig.h"
+// #include "RobotConfig.h"
 #include "VoyCmd.h"
 
 struct SensorData_t
