@@ -15,8 +15,8 @@ void Kinematics::KinematicsInverse(float linear_speed, float angular_speed, floa
 
     float v_left = linear_speed - (angular_speed * wheel_distance / 2.0);
     float v_right = linear_speed + (angular_speed * wheel_distance / 2.0);
-    *out_left_rotation_speed = (30 * reduction_ratio * v_left) / (M_PI * wheel_radius);
-    *out_right_rotation_speed = (30 * reduction_ratio * v_right) / (M_PI * wheel_radius);
+    *out_left_rotation_speed = (2*30 * reduction_ratio * v_left) / (M_PI * wheel_radius);
+    *out_right_rotation_speed = (2*30 * reduction_ratio * v_right) / (M_PI * wheel_radius);
 
 }
 

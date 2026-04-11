@@ -16,15 +16,18 @@ CVoyCmd *g_voyCmd = nullptr;
 Kinematics kinematics;
 
 // note:设定目标速度和角速度
-float target_linear_speed = 0.1; // 目标线速度，单位：米/秒
-float target_angular_speed = 0;  // 目标角速度，单位：弧度/秒
+float target_linear_speed = 0.0f; // 目标线速度，单位：米/秒
+float target_angular_speed = -M_PI_2;  // 目标角速度，单位：弧度/秒
 float out_left_speed = 0.0f;     // 输出左轮速度，单位：弧度/秒
 float out_right_speed = 0.0f;    // 输出右轮速度，单位：
 
-float wheel_distance = 0.46;     // 轮距，单位：米
-float wheel_radius = 0.21 * 0.5; // 轮半径，单位：米
+float wheel_distance = 0.41;     // 轮距，单位：米
+float wheel_radius = 0.22 * 0.5; // 轮半径，单位：米
+
+float timer_duration = 5.0f; // 定时器持续时间，单位：秒
 
 bool is_show_map = false; // 是否显示地图（终端和ROOT）
+bool is_open_timer = false; // 是否开启定时器自动退出
 
 int main()
 {
@@ -35,11 +38,12 @@ int main()
     // 创建机器人命令对象
     CVoyCmd voyCmd;
     g_voyCmd = &voyCmd;
-
+    
     // 设置传感器数据显示行为
     RobotBehavior sensorBehavior(true);
     voyCmd.SetBehavior(&sensorBehavior);
     sensorBehavior.SetShowSensor(false); // 关闭传感器数据显示
+    sensorBehavior.SetKinematics(&kinematics); // 关联运动学对象
 
     // 连接硬件
     voyCmd.m_pPhy = &serial;
@@ -98,27 +102,67 @@ int main()
     std::cout << "机器人运动中...按任意键停止（10秒后自动退出）" << std::endl;
 
     // 开启电机参数自动查询
-    voyCmd.AutoQueryLMotorParam(200);
-    voyCmd.AutoQueryRMotorParam(200);
+    // voyCmd.AutoQueryLMotorParam(200);
+    // voyCmd.AutoQueryRMotorParam(200);
 
     // 主循环
     bool IsRunning = true;
     auto loop_start_time = std::chrono::system_clock::now(); // 记录循环开始时间
+    auto last_print_time = loop_start_time; // 记录上次打印时间
     while (IsRunning)
     {
 
         // 开始时间
         auto current_time = std::chrono::system_clock::now();
 
-        // 定时退出
-        // note:设定自动退出时间
-        std::chrono::duration<float> elapsed = current_time - loop_start_time;
-        if (elapsed.count() >= 10.0f)
-        {
-            IsRunning = false;
-            std::cout << "已运行10秒，自动停止运动..." << std::endl;
+        // todo:暂时搁置查询电机速度，线程间通信未解决
+        // voyCmd.QueryLMotorParam();
+        // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // voyCmd.QueryRMotorParam();
+        // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
+        // 设置电机速度
+        int left_speed_rpm = static_cast<int>(kinematics.GetMotorSpeed(0));
+        int right_speed_rpm = static_cast<int>(kinematics.GetMotorSpeed(1));
+        voyCmd.SetBothMotorsSpeed(left_speed_rpm, right_speed_rpm);
+        
+        if(abs(kinematics.GetOdem().angle) >= M_PI_2){
+            break; // 达到目标角度后停止运动 
         }
-
+        
+        // 添加延时，避免CPU占用过高
+        // std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        
+        // 计算循环耗时
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<float> duration_Second = end - current_time;
+        auto dt = duration_Second.count(); // 循环耗时，单位：秒
+        
+        // 更新速度和里程计
+        kinematics.UpdateMotorSpeed(dt, left_speed_rpm, right_speed_rpm);
+        
+        std::cout << std::fixed << std::setprecision(2); // 设置输出格式为固定小数点，保留3位小数
+        
+        auto this_print_time = std::chrono::system_clock::now();
+        std::chrono::duration<float> print_elapsed = this_print_time - last_print_time;
+        
+        // 机器人全局坐标与超声数据
+        float robot_x = kinematics.GetOdem().x; // 机器人坐标
+        float robot_y = kinematics.GetOdem().y;
+        float robot_yaw = kinematics.GetOdem().angle; // 朝向0°
+        
+        if (print_elapsed.count() >= 0.1f) {
+            // std::cout << "里程计信息 - 线速度: " << kinematics.GetOdem().linear_speed << " m/s, 角速度: " << kinematics.GetOdem().angular_speed << " rad/s" <<std::endl;
+            std::cout << "里程计信息 - 位置: (" << robot_x << ", " << robot_y << "), 角度: " << robot_yaw << " rad" << std::endl;
+            last_print_time = this_print_time;
+        }
+        
+        // todo: 这里使用了假数据，实际应用中应使用从传感器获取的距离值
+        float distance = 1.0f;
+        
+        // 3. 超声更新：波束角【固定15°】
+        // map.UpdateByUltrasonic(robot_x, robot_y, robot_yaw, distance, 15.0f);
+        
         // 手动退出
         char ch;
         if (read(STDIN_FILENO, &ch, 1) > 0)
@@ -127,36 +171,20 @@ int main()
             std::cout << "检测到按键，停止运动..." << std::endl;
         }
 
-        // 设置电机速度
-        int left_speed_rpm = static_cast<int>(kinematics.GetMotorSpeed(0));
-        int right_speed_rpm = static_cast<int>(kinematics.GetMotorSpeed(1));
-        voyCmd.SetBothMotorsSpeed(left_speed_rpm, right_speed_rpm);
-
-        // 添加延时，避免CPU占用过高
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
-
-        // 计算循环耗时
-        auto end = std::chrono::system_clock::now();
-        std::chrono::duration<float> duration_Second = end - current_time;
-        auto dt = duration_Second.count(); // 循环耗时，单位：秒
-
-        // 更新速度和里程计
-        kinematics.UpdateMotorSpeed(dt, out_left_speed, out_right_speed);
-
-        std::cout << std::fixed << std::setprecision(3); // 设置输出格式为固定小数点，保留3位小数
-        // std::cout << "里程计信息 - 线速度: " << kinematics.GetOdem().linear_speed << " m/s, 角速度: " << kinematics.GetOdem().angular_speed << " rad/s" <<std::endl;
-        // std::cout << "里程计信息 - 位置: (" << kinematics.GetOdem().x << ", " << kinematics.GetOdem().y << "), 角度: " << kinematics.GetOdem().angle << " rad" << std::endl;
-
-        // 机器人全局坐标与超声数据
-        // todo: 这里使用了假数据，实际应用中应使用从传感器获取的距离值
-        float robot_x = kinematics.GetOdem().x; // 机器人坐标
-        float robot_y = kinematics.GetOdem().y;
-        float robot_yaw = kinematics.GetOdem().angle; // 朝向0°
-        float distance = 1.0f;                        // 超声测到障碍物 1米
-
-        // 3. 超声更新：波束角【固定15°】
-        map.UpdateByUltrasonic(robot_x, robot_y, robot_yaw, distance, 15.0f);
+        // 定时退出
+        // note:设定自动退出时间
+        std::chrono::duration<float> elapsed = current_time - loop_start_time;
+        if (elapsed.count() >= timer_duration && is_open_timer)
+        {
+            IsRunning = false;
+            std::cout << "已运行" << timer_duration<< "秒，自动停止运动..." << std::endl;
+        }
     }
+
+    auto loop_end_time = std::chrono::system_clock::now();
+    std::chrono::duration<float> loop_duration = loop_end_time - loop_start_time;
+    std::cout << "主循环总耗时: " << loop_duration.count() << " 秒" << std::endl;
+
     if (is_show_map)
     {
 
@@ -175,6 +203,7 @@ int main()
     // 等待线程完全停止
     voyCmd.AutoQueryLMotorParam(0);
     voyCmd.AutoQueryRMotorParam(0);
+    
 
     // 停止所有线程和运动
     // voyCmd.SetBothMotorsSpeed(0, 0);

@@ -1,6 +1,10 @@
 #include "RobotBehavior.h"
 #include <iostream>
 
+void RobotBehavior::SetKinematics(Kinematics* kinematics) {
+    m_kinematics = kinematics;
+}
+
 void RobotBehavior::SetCmd(CVoyCmd* pCmd) {
     m_cmd = pCmd;
 }
@@ -57,8 +61,7 @@ void RobotBehavior::AfterUpdateInfrared(BOOL* data, BOOL* enabled, UINT state) {
 }
 
 void RobotBehavior::AfterSendCommand(UCHAR* buffer, int length, UINT state) {
-        // 输出完整的帧数据
-        // std::cout << "Command sent, length: " << length << std::endl;
+        // // 输出完整的帧数据
         // std::cout << "发送帧数据: ";
         // for (int i = 0; i < length; i++) {
         //     std::cout << "0x" << std::hex << (int)buffer[i] << " ";
@@ -71,9 +74,15 @@ SensorData_t& RobotBehavior::GetSensorData() {
 }
 
 void RobotBehavior::AfterUpdateMotorParam(UINT pos, UINT speed, UINT state) {
-    // 这里可以添加对电机参数更新的处理逻辑，例如打印电机状态
+    // 解析传入的电机参数
     const char* sign = (speed & 0x8000) ? "-" : "+"; // 判断速度符号
     int out_speed = speed & 0x7FFF; // 获取速度
-    // std::cout << "[电机调试]位置: " << pos << " 速度: " << sign << out_speed << std::endl;
+    
+    // 如果关联了 Kinematics 对象，可以访问完整的电机参数
+    if (m_kinematics != nullptr) {
+            std::cout << "[电机调试]位置: " << pos 
+                      << " 速度: " << sign << out_speed 
+                      << " rpm " << std::endl;
+    }
 }
 

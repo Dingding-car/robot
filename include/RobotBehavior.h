@@ -4,6 +4,7 @@
 #include "IBehavior.h"
 // #include "RobotConfig.h"
 #include "VoyCmd.h"
+#include "Kinematics.h"
 
 struct SensorData_t
 {
@@ -16,11 +17,13 @@ private:
     CVoyCmd* m_cmd;
     bool m_showSensorData;
     SensorData_t m_ultraSonicData;
+    Kinematics* m_kinematics;
 
 public:
-    RobotBehavior(bool showSensorData = true) : m_cmd(nullptr), m_showSensorData(showSensorData) {}
+    RobotBehavior(bool showSensorData = true) : m_cmd(nullptr), m_showSensorData(showSensorData), m_kinematics(nullptr) {}
 
     void SetShowSensor(bool enable);
+    void SetKinematics(Kinematics* kinematics);
     void SetCmd(CVoyCmd *pCmd) override;
     void AfterUpdateUSonic(DOUBLE *distances, BOOL *enabled, UINT state) override;
     void AfterUpdateInfrared(BOOL *data, BOOL *enabled, UINT state) override;

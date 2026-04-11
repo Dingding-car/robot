@@ -67,13 +67,17 @@ public:
     void AutoQueryMotorParam(EMotorType motorType, UINT timeGap); // 自动查询电机参数
     void AutoQueryLMotorParam(UINT timeGap);
     void AutoQueryRMotorParam(UINT timeGap);
+    
+    void QueryMotorParamThread(EMotorType motorType);
+    void QueryLMotorParamThread();
+    void QueryRMotorParamThread();
 
 
-/*     // 高级控制方法
-    void SpeedByGyro(int speed);                                    // 陀螺仪直行
-    void CircleByGyro(int angle, int speed);                        // 陀螺仪转向
-    void Kick();                                                    // 踢球动作
-    void Demarcate();                                               // 陀螺仪标 */
+    /*     // 高级控制方法
+        void SpeedByGyro(int speed);                                    // 陀螺仪直行
+        void CircleByGyro(int angle, int speed);                        // 陀螺仪转向
+        void Kick();                                                    // 踢球动作
+        void Demarcate();                                               // 陀螺仪标 */
     
     // 状态管理
     UINT GetState() const { return nState; }                        // 获取当前状态
@@ -130,9 +134,9 @@ private:
     void QueryUSonicThread();                                       // 超声波查询线程
     void QueryInfraRedThread();                                     // 红外查询线程
     void QueryCompassThread();                                      // 罗盘查询线程
-    void QueryMotorParamThread(EMotorType motorType);              // 电机参数查询线程
-    void QueryLMotorParamThread();                                      // 左电机参数查询线程
-    void QueryRMotorParamThread();                                      // 右电机参数查询线程
+    // void QueryMotorParamThread(EMotorType motorType);              // 电机参数查询线程
+    // void QueryLMotorParamThread();                                      // 左电机参数查询线程
+    // void QueryRMotorParamThread();                                      // 右电机参数查询线程
     
     // 辅助方法
     void m_UpdateState();                                           // 更新状态

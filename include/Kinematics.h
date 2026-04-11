@@ -21,8 +21,8 @@ typedef struct{
 class Kinematics
 {
 private:
-    float wheel_distance = 0.46;       // 轮距，单位：米
-    float wheel_radius = 0.21 * 0.5;   // 轮半径，单位：米
+    float wheel_distance = 0.41;       // 轮距，单位：米
+    float wheel_radius = 0.22 * 0.5;   // 轮半径，单位：米
     float reduction_ratio = 15.0;       // 齿轮减速比
     motor_param_t motor_param[2]; // 电机参数数组，0为左轮，1为右轮
     odem_t odem; // 里程计数据结构
@@ -45,6 +45,12 @@ public:
 
     // 获取里程计信息
     odem_t &GetOdem();
+
+    // // 获取电机参数
+    // const motor_param_t& GetMotorParam(int motor_id) const { 
+    //     return motor_param[motor_id]; 
+    // }
+    
     // 更新里程计信息
     void m_UpdataOdem(float dt);
     // 角度转换

@@ -203,7 +203,7 @@ void SerialCom::ReceiveThread() {
         
         // 设置超时时间
         timeout.tv_sec = 0;
-        timeout.tv_usec = 100000;   // 100ms超时
+        timeout.tv_usec = 10000;   // 10ms超时
         
         // 监控串口是否有数据可读
         int result = select(m_hCom + 1, &readfds, NULL, NULL, &timeout);

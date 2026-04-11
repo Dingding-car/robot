@@ -6,7 +6,8 @@
 #include <thread>
 
 // 构造函数
-CVoyCmd::CVoyCmd() {
+CVoyCmd::CVoyCmd()
+{
   // 初始化传感器数组
   m_charUltrasonic = new UCHAR[ULTRASONICAMOUNT];
   EnableUSonic = new BOOL[ULTRASONICAMOUNT];
@@ -17,7 +18,8 @@ CVoyCmd::CVoyCmd() {
   ValInfrared = new BOOL[INFRAREDMOUNT];
 
   // 初始化传感器数据
-  for (int i = 0; i < ULTRASONICAMOUNT; i++) {
+  for (int i = 0; i < ULTRASONICAMOUNT; i++)
+  {
     ValUSonic[i] = 0;
     EnableUSonic[i] = FALSE;
     EnableInfrared[i] = FALSE;
@@ -29,13 +31,15 @@ CVoyCmd::CVoyCmd() {
       sizeof(usonicEnableList) / sizeof(usonicEnableList[0]);
 
   // 批量开启指定超声波传感器
-  for (int i = 0; i < usonicEnableCount; i++) {
+  for (int i = 0; i < usonicEnableCount; i++)
+  {
     int index = 24 - usonicEnableList[i]; // 转数组下标
     EnableUSonic[index] = TRUE;
     EnableInfrared[index] = TRUE; // 同步开启红外
   }
 
-  for (int i = 0; i < INFRAREDMOUNT; i++) {
+  for (int i = 0; i < INFRAREDMOUNT; i++)
+  {
     ValInfrared[i] = FALSE;
   }
 
@@ -85,7 +89,8 @@ CVoyCmd::CVoyCmd() {
   m_nFrameLength = 0;
 
   // 初始化伺服电机转角
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < 8; i++)
+  {
     ValServMotor[i] = 90;
   }
 
@@ -95,38 +100,45 @@ CVoyCmd::CVoyCmd() {
 }
 
 // 析构函数
-CVoyCmd::~CVoyCmd() {
+CVoyCmd::~CVoyCmd()
+{
   // 停止所有线程
   bToEndThreads = TRUE;
   m_running = false;
 
   // 等待线程结束
-  if (m_usonicThread && m_usonicThread->joinable()) {
+  if (m_usonicThread && m_usonicThread->joinable())
+  {
     m_usonicThread->join();
     delete m_usonicThread;
   }
 
-  if (m_infraredThread && m_infraredThread->joinable()) {
+  if (m_infraredThread && m_infraredThread->joinable())
+  {
     m_infraredThread->join();
     delete m_infraredThread;
   }
 
-  if (m_compassThread && m_compassThread->joinable()) {
+  if (m_compassThread && m_compassThread->joinable())
+  {
     m_compassThread->join();
     delete m_compassThread;
   }
 
-  if (m_motorParamThread && m_motorParamThread->joinable()) {
+  if (m_motorParamThread && m_motorParamThread->joinable())
+  {
     m_motorParamThread->join();
     delete m_motorParamThread;
   }
 
-  if (m_motorLParamThread && m_motorLParamThread->joinable()) {
+  if (m_motorLParamThread && m_motorLParamThread->joinable())
+  {
     m_motorLParamThread->join();
     delete m_motorLParamThread;
   }
 
-  if (m_motorRParamThread && m_motorRParamThread->joinable()) {
+  if (m_motorRParamThread && m_motorRParamThread->joinable())
+  {
     m_motorRParamThread->join();
     delete m_motorRParamThread;
   }
@@ -142,125 +154,163 @@ CVoyCmd::~CVoyCmd() {
   delete[] m_pSendBuf;
 
   // 给线程时间退出
-  if (QueryUSonicTime > QueryInfraRedTime) {
+  if (QueryUSonicTime > QueryInfraRedTime)
+  {
     std::this_thread::sleep_for(
         std::chrono::milliseconds(QueryUSonicTime + 10));
-  } else {
+  }
+  else
+  {
     std::this_thread::sleep_for(
         std::chrono::milliseconds(QueryInfraRedTime + 10));
   }
 }
 
 // 线程函数
-void CVoyCmd::QueryUSonicThread() {
+void CVoyCmd::QueryUSonicThread()
+{
   UINT startTime = QueryUSonicTime;
-  while (startTime == QueryUSonicTime && !bToEndThreads) {
+  while (startTime == QueryUSonicTime && !bToEndThreads)
+  {
     QueryUltrasonicSensor();
     std::this_thread::sleep_for(std::chrono::milliseconds(startTime));
   }
 }
 
-void CVoyCmd::QueryInfraRedThread() {
+void CVoyCmd::QueryInfraRedThread()
+{
   UINT startTime = QueryInfraRedTime;
-  while (startTime == QueryInfraRedTime && !bToEndThreads) {
+  while (startTime == QueryInfraRedTime && !bToEndThreads)
+  {
     QueryInfrared();
     std::this_thread::sleep_for(std::chrono::milliseconds(startTime));
   }
 }
 
-void CVoyCmd::QueryCompassThread() {
+void CVoyCmd::QueryCompassThread()
+{
   UINT startTime = QueryCompassTime;
-  while (startTime == QueryCompassTime && !bToEndThreads) {
+  while (startTime == QueryCompassTime && !bToEndThreads)
+  {
     QueryCompass();
     std::this_thread::sleep_for(std::chrono::milliseconds(startTime));
   }
 }
 
-void CVoyCmd::QueryMotorParamThread(EMotorType motorType) {
+void CVoyCmd::QueryMotorParamThread(EMotorType motorType)
+{
   UINT startTime = QueryMotorParamTime;
-  while (startTime == QueryMotorParamTime && !bToEndThreads) {
+  while (startTime == QueryMotorParamTime && !bToEndThreads)
+  {
     QueryMotorParam(motorType);
     std::this_thread::sleep_for(std::chrono::milliseconds(startTime));
   }
 }
 
-void CVoyCmd::QueryLMotorParamThread() {
+void CVoyCmd::QueryLMotorParamThread()
+{
   UINT startTime = QueryLMotorParamTime;
-  while (startTime == QueryLMotorParamTime && !bToEndThreads) {
-    QueryLMotorParam();
+  while (startTime == QueryLMotorParamTime && !bToEndThreads)
+  {
+    {
+      std::lock_guard<std::mutex> lock(m_sendMutex);
+      QueryLMotorParam();
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(startTime));
   }
 }
 
-void CVoyCmd::QueryRMotorParamThread() {
+void CVoyCmd::QueryRMotorParamThread()
+{
   UINT startTime = QueryRMotorParamTime;
-  while (startTime == QueryRMotorParamTime && !bToEndThreads) {
-    QueryRMotorParam();
+  while (startTime == QueryRMotorParamTime && !bToEndThreads)
+  {
+    {
+      std::lock_guard<std::mutex> lock(m_sendMutex);
+      QueryRMotorParam();
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(startTime));
   }
 }
 
 // 解析接收缓冲区
-void CVoyCmd::Parse(void *buf, int length) {
+void CVoyCmd::Parse(void *buf, int length)
+{
   if (length == 0 || buf == nullptr)
     return;
 
-  for (int i = 0; i < length; i++) {
+  for (int i = 0; i < length; i++)
+  {
     m_ParseBuffer(((UCHAR *)buf)[i]);
   }
 }
 
-void CVoyCmd::m_ParseBuffer(const UCHAR buf) {
+void CVoyCmd::m_ParseBuffer(const UCHAR buf)
+{
   // 查找帧开始标志
-  if (buf == (UCHAR)0xaa && m_cLast == (UCHAR)0x55 && !m_bFrameStart) {
+  if (buf == (UCHAR)0xaa && m_cLast == (UCHAR)0x55 && !m_bFrameStart)
+  {
     m_pRcvBuf[0] = 0x55;
     m_pRcvBuf[1] = 0xAA;
     m_bFrameStart = TRUE;
     return;
   }
 
-  if (m_bFrameStart) {
+  if (m_bFrameStart)
+  {
     m_cLast = 0x00;
     m_pRcvBuf[m_nRcvIndex + 2] = buf;
-    if (m_nRcvIndex == 1) {
+    if (m_nRcvIndex == 1)
+    {
       m_nFrameLength = (buf & 0x3f) + 4;
     }
     m_nRcvIndex++;
 
     // 接收到完整帧
-    if (m_nRcvIndex == m_nFrameLength) {
+    if (m_nRcvIndex == m_nFrameLength)
+    {
       m_ParseFrame(m_pRcvBuf + 2, m_nRcvIndex);
       m_ResetRcvBuf();
     }
 
     // 缓冲区溢出保护
-    if (m_nRcvIndex >= MAX_BUF) {
+    if (m_nRcvIndex >= MAX_BUF)
+    {
       m_ResetRcvBuf();
     }
-  } else {
+  }
+  else
+  {
     m_cLast = buf;
   }
 }
 
-void CVoyCmd::m_ParseFrame(UCHAR *buf, int length) {
-  if (!m_ValidFrame(buf, length)) {
+void CVoyCmd::m_ParseFrame(UCHAR *buf, int length)
+{
+  if (!m_ValidFrame(buf, length))
+  {
     m_ResponseError();
     return;
   }
 
-  switch (buf[2]) {
-  case 0x30: { // 超声波传感器响应
-    for (int i = 0; i < ULTRASONICAMOUNT; i++) {
+  switch (buf[2])
+  {
+  case 0x30:
+  { // 超声波传感器响应
+    for (int i = 0; i < ULTRASONICAMOUNT; i++)
+    {
       m_charUltrasonic[i] = buf[i + 3];
       ValUSonic[i] = m_CalDistance(m_charUltrasonic[i]);
     }
 
-    if (m_pBeh != nullptr) {
+    if (m_pBeh != nullptr)
+    {
       m_pBeh->AfterUpdateUSonic(ValUSonic, EnableUSonic, nState);
     }
     break;
   }
-  case 0x34: { // 罗盘和陀螺仪响应
+  case 0x34:
+  { // 罗盘和陀螺仪响应
     WORD CmpsData;
     CmpsData = buf[5];
     CmpsData <<= 8;
@@ -268,16 +318,22 @@ void CVoyCmd::m_ParseFrame(UCHAR *buf, int length) {
     m_angle = ((FLOAT)CmpsData / 180) * 3.1415926f;
     break;
   }
-  case 0x36: { // 红外传感器响应
-    for (int i = 0; i < INFRAREDCHAR; i++) {
+  case 0x36:
+  { // 红外传感器响应
+    for (int i = 0; i < INFRAREDCHAR; i++)
+    {
       m_charInfrared[i] = buf[i + 3];
       // std::cout << "[红外调试] 第 " << i << " 字节原始值: 0x" << std::hex <<
       // (int)m_charInfrared[i]
       // << "  二进制: " << std::bitset<8>((int)m_charInfrared[i]) << std::endl;
-      for (int j = 7; j >= 0; j--) {
-        if ((m_charInfrared[i] & 0x01) == 0x01) {
+      for (int j = 7; j >= 0; j--)
+      {
+        if ((m_charInfrared[i] & 0x01) == 0x01)
+        {
           ValInfrared[j + 8 * i] = false;
-        } else {
+        }
+        else
+        {
           ValInfrared[j + 8 * i] = true;
         }
         m_charInfrared[i] = m_charInfrared[i] >> 1;
@@ -285,28 +341,30 @@ void CVoyCmd::m_ParseFrame(UCHAR *buf, int length) {
       m_charInfrared[i] = m_charInfrared[i] >> 1;
     }
 
-    if (m_pBeh != nullptr) {
+    if (m_pBeh != nullptr)
+    {
       m_pBeh->AfterUpdateInfrared(ValInfrared, EnableInfrared, nState);
     }
     break;
   }
-  case 0x28: { // 电机编码器查询
+  case 0x28:
+  { // 电机编码器查询
     uint32_t pos = 0;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
+    {
       pos |= (uint32_t)buf[3 + i] << (8 * (4 - i));
     }
     m_pos = pos;
 
-    // 解析 2 字节速度（小端序）
-    // const char *sign = ((int16_t)buf[7] & 0x80) ? "-" : "+";
-    // int16_t speed_higher = ((int16_t)buf[7] & 0x7F) << 8; // 速度高位
+    // 解析速度（小端序）
     int16_t speed_higher = ((int16_t)buf[7]) << 8; // 速度高位（包含符号位）
-    int16_t speed_lower = (int16_t)buf[8];                // 速度低位
+    int16_t speed_lower = (int16_t)buf[8];         // 速度低位
     m_speed = (speed_higher | speed_lower);
-        // std::cout << "[电机调试] 位置: " << m_pos << " 速度: " << sign << m_speed
-        //           << std::endl;
-    if (m_pBeh != nullptr) {
-        m_pBeh->AfterUpdateMotorParam(m_pos, m_speed, nState);
+    // std::cout << "[电机调试] 位置: " << m_pos << " 速度: " << sign << m_speed
+    //           << std::endl;
+    if (m_pBeh != nullptr)
+    {
+      m_pBeh->AfterUpdateMotorParam(m_pos, m_speed, nState);
     }
 
     break;
@@ -326,7 +384,8 @@ void CVoyCmd::m_ParseFrame(UCHAR *buf, int length) {
   m_Response(buf, length);
 }
 
-void CVoyCmd::m_ResetRcvBuf() {
+void CVoyCmd::m_ResetRcvBuf()
+{
   memset(m_pRcvBuf, 0, MAX_BUF);
   m_nRcvIndex = 0;
   m_bFrameStart = FALSE;
@@ -334,22 +393,27 @@ void CVoyCmd::m_ResetRcvBuf() {
   m_nFrameLength = 0;
 }
 
-void CVoyCmd::m_ResetSendBuf() {
+void CVoyCmd::m_ResetSendBuf()
+{
   memset(m_pSendBuf, 0, MAX_BUF);
   m_nSendlength = 0;
 }
 
-BOOL CVoyCmd::m_ValidFrame(UCHAR *buf, int length) {
-  if ((buf[1] & 0x3f) != length - 4) {
+BOOL CVoyCmd::m_ValidFrame(UCHAR *buf, int length)
+{
+  if ((buf[1] & 0x3f) != length - 4)
+  {
     return false;
   }
 
   int sum = 0x000000ff;
-  for (int i = 0; i < length - 1; i++) {
+  for (int i = 0; i < length - 1; i++)
+  {
     sum += buf[i];
   }
 
-  if (buf[length - 1] != (UCHAR)(sum & 0x000000ff)) {
+  if (buf[length - 1] != (UCHAR)(sum & 0x000000ff))
+  {
     return false;
   }
 
@@ -358,34 +422,41 @@ BOOL CVoyCmd::m_ValidFrame(UCHAR *buf, int length) {
 
 void CVoyCmd::m_ResponseError() { std::cout << "接收到无效帧" << std::endl; }
 
-void CVoyCmd::m_Response(UCHAR *recbuf, int length) {
+void CVoyCmd::m_Response(UCHAR *recbuf, int length)
+{
   // 有效帧接收回调
-  if (m_pBeh != nullptr) {
+  if (m_pBeh != nullptr)
+  {
     m_pBeh->AfterSendCommand(m_pSendBuf, m_nSendlength, nState);
   }
 }
 
-UCHAR CVoyCmd::m_CalSum(int length) {
+UCHAR CVoyCmd::m_CalSum(int length)
+{
   int temp = 0;
-  for (int i = 0; i < length; i++) {
+  for (int i = 0; i < length; i++)
+  {
     temp += m_pSendBuf[i];
   }
   return (UCHAR)(temp & 0x000000ff);
 }
 
-DOUBLE CVoyCmd::m_CalDistance(UCHAR inUSChar) {
+DOUBLE CVoyCmd::m_CalDistance(UCHAR inUSChar)
+{
   return (DOUBLE)inUSChar * 0.02174;
 }
 
 void CVoyCmd::m_GenerateSendBuffer(UCHAR addr, UCHAR status, UCHAR length,
-                                   UCHAR ctrlcode, UCHAR *data) {
+                                   UCHAR ctrlcode, UCHAR *data)
+{
   m_pSendBuf[0] = (UCHAR)0x55;
   m_pSendBuf[1] = (UCHAR)0xaa;
   m_pSendBuf[2] = addr;
   m_pSendBuf[3] = ((status << 6) & 0xc0) | (length & 0x3f);
   m_pSendBuf[4] = ctrlcode;
 
-  if (length > 0 && data != nullptr) {
+  if (length > 0 && data != nullptr)
+  {
     memcpy(&m_pSendBuf[5], data, length);
   }
 
@@ -393,18 +464,21 @@ void CVoyCmd::m_GenerateSendBuffer(UCHAR addr, UCHAR status, UCHAR length,
   m_nSendlength = length + 6;
 
   // 通过物理层发送
-  if (m_pPhy != nullptr) {
+  if (m_pPhy != nullptr)
+  {
     m_pPhy->Send(m_pSendBuf, m_nSendlength);
   }
 
   // 回调
-  if (m_pBeh != nullptr) {
+  if (m_pBeh != nullptr)
+  {
     m_pBeh->AfterSendCommand(m_pSendBuf, m_nSendlength, nState);
   }
 }
 
 // 机器人控制方法
-void CVoyCmd::Brake(UCHAR breakmode) {
+void CVoyCmd::Brake(UCHAR breakmode)
+{
   m_GenerateSendBuffer((UCHAR)0x01, 0, 1, (UCHAR)0x21, &breakmode);
   m_iLspeed = 0;
   m_iRspeed = 0;
@@ -413,8 +487,10 @@ void CVoyCmd::Brake(UCHAR breakmode) {
 
 // 电机转速设置(单位：RPM)
 // 输出轴转速要➗齿轮减速比 15
-void CVoyCmd::SetBothMotorsSpeed(int leftSpeed, int rightSpeed) {
-  if (leftSpeed == m_iLspeed && rightSpeed == m_iRspeed) {
+void CVoyCmd::SetBothMotorsSpeed(int leftSpeed, int rightSpeed)
+{
+  if (leftSpeed == m_iLspeed && rightSpeed == m_iRspeed)
+  {
     return;
   }
 
@@ -436,8 +512,10 @@ void CVoyCmd::SetBothMotorsSpeed(int leftSpeed, int rightSpeed) {
   m_UpdateState();
 }
 
-void CVoyCmd::SetLMotorSpeed(int leftSpeed) {
-  if (leftSpeed == m_iLspeed) {
+void CVoyCmd::SetLMotorSpeed(int leftSpeed)
+{
+  if (leftSpeed == m_iLspeed)
+  {
     return;
   }
 
@@ -452,8 +530,10 @@ void CVoyCmd::SetLMotorSpeed(int leftSpeed) {
   m_UpdateState();
 }
 
-void CVoyCmd::SetRMotorSpeed(int rightSpeed) {
-  if (rightSpeed == m_iRspeed) {
+void CVoyCmd::SetRMotorSpeed(int rightSpeed)
+{
+  if (rightSpeed == m_iRspeed)
+  {
     return;
   }
 
@@ -469,18 +549,23 @@ void CVoyCmd::SetRMotorSpeed(int rightSpeed) {
 }
 
 // 传感器查询方法
-void CVoyCmd::QueryInfrared() {
+void CVoyCmd::QueryInfrared()
+{
   m_GenerateSendBuffer((UCHAR)0x02, 0, 0, (UCHAR)0x36, nullptr);
 }
 
-void CVoyCmd::QueryUltrasonicSensor() {
+void CVoyCmd::QueryUltrasonicSensor()
+{
   UCHAR ultrasonicchar[3];
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 3; i++)
+  {
     ultrasonicchar[i] = 0xff;
   }
 
-  for (int i = 0; i < 24; i++) {
-    if (EnableUSonic[i] == FALSE) {
+  for (int i = 0; i < 24; i++)
+  {
+    if (EnableUSonic[i] == FALSE)
+    {
       ultrasonicchar[2 - i / 8] &= ~(0x01 << (i % 8));
     }
   }
@@ -488,40 +573,49 @@ void CVoyCmd::QueryUltrasonicSensor() {
   m_GenerateSendBuffer((UCHAR)0x02, 0, 3, (UCHAR)0x30, ultrasonicchar);
 }
 
-void CVoyCmd::QueryCompass() {
+void CVoyCmd::QueryCompass()
+{
   m_GenerateSendBuffer(0x03, 0, 0, 0x34, nullptr);
 }
 
-void CVoyCmd::QueryMotorParam(EMotorType motorType) {
+void CVoyCmd::QueryMotorParam(EMotorType motorType)
+{
   m_GenerateSendBuffer(0x01, 0, 1, 0x28, (UCHAR *)&motorType);
 }
 
-void CVoyCmd::QueryLMotorParam() {
+void CVoyCmd::QueryLMotorParam()
+{
   EMotorType motorType = MOTOR_LEFT;
   m_GenerateSendBuffer(0x01, 0, 1, 0x28, (UCHAR *)&motorType);
 }
 
-void CVoyCmd::QueryRMotorParam() {
+void CVoyCmd::QueryRMotorParam()
+{
   EMotorType motorType = MOTOR_RIGHT;
   m_GenerateSendBuffer(0x01, 0, 1, 0x28, (UCHAR *)&motorType);
 }
 
 // 自动查询方法
-void CVoyCmd::AutoQueryUSonic(UINT timeGap) {
-  if (timeGap == QueryUSonicTime) {
+void CVoyCmd::AutoQueryUSonic(UINT timeGap)
+{
+  if (timeGap == QueryUSonicTime)
+  {
     return;
   }
 
   QueryUSonicTime = timeGap;
 
-  if (QueryUSonicTime != 0) {
+  if (QueryUSonicTime != 0)
+  {
     // 先开启声纳
     UCHAR sw = 0x01;
     m_GenerateSendBuffer(2, 0, 1, 0x31, &sw);
 
     // 清理现有线程
-    if (m_usonicThread != nullptr) {
-      if (m_usonicThread->joinable()) {
+    if (m_usonicThread != nullptr)
+    {
+      if (m_usonicThread->joinable())
+      {
         m_usonicThread->join();
       }
       delete m_usonicThread;
@@ -530,13 +624,17 @@ void CVoyCmd::AutoQueryUSonic(UINT timeGap) {
 
     // 启动新线程
     m_usonicThread = new std::thread(&CVoyCmd::QueryUSonicThread, this);
-  } else {
+  }
+  else
+  {
     UCHAR sw = 0x00;
     m_GenerateSendBuffer(2, 0, 1, 0x31, &sw);
 
     // 清理线程
-    if (m_usonicThread != nullptr) {
-      if (m_usonicThread->joinable()) {
+    if (m_usonicThread != nullptr)
+    {
+      if (m_usonicThread->joinable())
+      {
         m_usonicThread->join();
       }
       delete m_usonicThread;
@@ -545,17 +643,22 @@ void CVoyCmd::AutoQueryUSonic(UINT timeGap) {
   }
 }
 
-void CVoyCmd::AutoQueryInfraRed(UINT timeGap) {
-  if (timeGap == QueryInfraRedTime) {
+void CVoyCmd::AutoQueryInfraRed(UINT timeGap)
+{
+  if (timeGap == QueryInfraRedTime)
+  {
     return;
   }
 
   QueryInfraRedTime = timeGap;
 
-  if (QueryInfraRedTime != 0) {
+  if (QueryInfraRedTime != 0)
+  {
     // 清理现有线程
-    if (m_infraredThread != nullptr) {
-      if (m_infraredThread->joinable()) {
+    if (m_infraredThread != nullptr)
+    {
+      if (m_infraredThread->joinable())
+      {
         m_infraredThread->join();
       }
       delete m_infraredThread;
@@ -564,10 +667,14 @@ void CVoyCmd::AutoQueryInfraRed(UINT timeGap) {
 
     // 启动新线程
     m_infraredThread = new std::thread(&CVoyCmd::QueryInfraRedThread, this);
-  } else {
+  }
+  else
+  {
     // 清理线程
-    if (m_infraredThread != nullptr) {
-      if (m_infraredThread->joinable()) {
+    if (m_infraredThread != nullptr)
+    {
+      if (m_infraredThread->joinable())
+      {
         m_infraredThread->join();
       }
       delete m_infraredThread;
@@ -576,17 +683,22 @@ void CVoyCmd::AutoQueryInfraRed(UINT timeGap) {
   }
 }
 
-void CVoyCmd::AutoQueryCompass(UINT timeGap) {
-  if (timeGap == QueryCompassTime) {
+void CVoyCmd::AutoQueryCompass(UINT timeGap)
+{
+  if (timeGap == QueryCompassTime)
+  {
     return;
   }
 
   QueryCompassTime = timeGap;
 
-  if (QueryCompassTime != 0) {
+  if (QueryCompassTime != 0)
+  {
     // 清理现有线程
-    if (m_compassThread != nullptr) {
-      if (m_compassThread->joinable()) {
+    if (m_compassThread != nullptr)
+    {
+      if (m_compassThread->joinable())
+      {
         m_compassThread->join();
       }
       delete m_compassThread;
@@ -595,10 +707,14 @@ void CVoyCmd::AutoQueryCompass(UINT timeGap) {
 
     // 启动新线程
     m_compassThread = new std::thread(&CVoyCmd::QueryCompassThread, this);
-  } else {
+  }
+  else
+  {
     // 清理线程
-    if (m_compassThread != nullptr) {
-      if (m_compassThread->joinable()) {
+    if (m_compassThread != nullptr)
+    {
+      if (m_compassThread->joinable())
+      {
         m_compassThread->join();
       }
       delete m_compassThread;
@@ -607,17 +723,22 @@ void CVoyCmd::AutoQueryCompass(UINT timeGap) {
   }
 }
 
-void CVoyCmd::AutoQueryMotorParam(EMotorType motorType, UINT timeGap) {
-  if (timeGap == QueryMotorParamTime) {
+void CVoyCmd::AutoQueryMotorParam(EMotorType motorType, UINT timeGap)
+{
+  if (timeGap == QueryMotorParamTime)
+  {
     return;
   }
 
   QueryMotorParamTime = timeGap;
 
-  if (QueryMotorParamTime != 0) {
+  if (QueryMotorParamTime != 0)
+  {
     // 清理现有线程
-    if (m_motorParamThread != nullptr) {
-      if (m_motorParamThread->joinable()) {
+    if (m_motorParamThread != nullptr)
+    {
+      if (m_motorParamThread->joinable())
+      {
         m_motorParamThread->join();
       }
       delete m_motorParamThread;
@@ -627,10 +748,14 @@ void CVoyCmd::AutoQueryMotorParam(EMotorType motorType, UINT timeGap) {
     // 启动新线程
     m_motorParamThread =
         new std::thread(&CVoyCmd::QueryMotorParamThread, this, motorType);
-  } else {
+  }
+  else
+  {
     // 清理线程
-    if (m_motorParamThread != nullptr) {
-      if (m_motorParamThread->joinable()) {
+    if (m_motorParamThread != nullptr)
+    {
+      if (m_motorParamThread->joinable())
+      {
         m_motorParamThread->join();
       }
       delete m_motorParamThread;
@@ -639,17 +764,22 @@ void CVoyCmd::AutoQueryMotorParam(EMotorType motorType, UINT timeGap) {
   }
 }
 
-void CVoyCmd::AutoQueryLMotorParam(UINT timeGap) {
-  if (timeGap == QueryLMotorParamTime) {
+void CVoyCmd::AutoQueryLMotorParam(UINT timeGap)
+{
+  if (timeGap == QueryLMotorParamTime)
+  {
     return;
   }
 
   QueryLMotorParamTime = timeGap;
 
-  if (QueryLMotorParamTime != 0) {
+  if (QueryLMotorParamTime != 0)
+  {
     // 清理现有线程
-    if (m_motorLParamThread != nullptr) {
-      if (m_motorLParamThread->joinable()) {
+    if (m_motorLParamThread != nullptr)
+    {
+      if (m_motorLParamThread->joinable())
+      {
         m_motorLParamThread->join();
       }
       delete m_motorLParamThread;
@@ -660,10 +790,14 @@ void CVoyCmd::AutoQueryLMotorParam(UINT timeGap) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
     m_motorLParamThread =
         new std::thread(&CVoyCmd::QueryLMotorParamThread, this);
-  } else {
+  }
+  else
+  {
     // 清理线程
-    if (m_motorLParamThread != nullptr) {
-      if (m_motorLParamThread->joinable()) {
+    if (m_motorLParamThread != nullptr)
+    {
+      if (m_motorLParamThread->joinable())
+      {
         m_motorLParamThread->join();
       }
       delete m_motorLParamThread;
@@ -672,17 +806,22 @@ void CVoyCmd::AutoQueryLMotorParam(UINT timeGap) {
   }
 }
 
-void CVoyCmd::AutoQueryRMotorParam(UINT timeGap) {
-  if (timeGap == QueryRMotorParamTime) {
+void CVoyCmd::AutoQueryRMotorParam(UINT timeGap)
+{
+  if (timeGap == QueryRMotorParamTime)
+  {
     return;
   }
 
   QueryRMotorParamTime = timeGap;
 
-  if (QueryRMotorParamTime != 0) {
+  if (QueryRMotorParamTime != 0)
+  {
     // 清理现有线程
-    if (m_motorRParamThread != nullptr) {
-      if (m_motorRParamThread->joinable()) {
+    if (m_motorRParamThread != nullptr)
+    {
+      if (m_motorRParamThread->joinable())
+      {
         m_motorRParamThread->join();
       }
       delete m_motorRParamThread;
@@ -693,10 +832,14 @@ void CVoyCmd::AutoQueryRMotorParam(UINT timeGap) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
     m_motorRParamThread =
         new std::thread(&CVoyCmd::QueryRMotorParamThread, this);
-  } else {
+  }
+  else
+  {
     // 清理线程
-    if (m_motorRParamThread != nullptr) {
-      if (m_motorRParamThread->joinable()) {
+    if (m_motorRParamThread != nullptr)
+    {
+      if (m_motorRParamThread->joinable())
+      {
         m_motorRParamThread->join();
       }
       delete m_motorRParamThread;
@@ -742,22 +885,28 @@ void CVoyCmd::Demarcate() {
     m_GenerateSendBuffer(0x01, 0, 0, 0x2f, nullptr);
 }*/
 
-WORD CVoyCmd::m_CalculateSpeed(int speed) {
+WORD CVoyCmd::m_CalculateSpeed(int speed)
+{
   BOOL forward = (speed >= 0);
-  if (!forward) {
+  if (!forward)
+  {
     speed = -speed;
   }
 
-  if (speed > 30000) {
+  if (speed > 30000)
+  {
     speed = 30000;
   }
 
   WORD ret = 0;
   speed &= 0x7fff;
 
-  if (forward) {
+  if (forward)
+  {
     speed &= 0x7fff;
-  } else {
+  }
+  else
+  {
     speed |= 0x8000;
   }
 
@@ -765,50 +914,71 @@ WORD CVoyCmd::m_CalculateSpeed(int speed) {
   return ret;
 }
 
-void CVoyCmd::m_UpdateState() {
+void CVoyCmd::m_UpdateState()
+{
   // 两电机同速
-  if (m_iLspeed == m_iRspeed) {
-    if (0 == m_iRspeed) {
+  if (m_iLspeed == m_iRspeed)
+  {
+    if (0 == m_iRspeed)
+    {
       nState = STOP;
       return;
     }
-    if (m_iLspeed > 0) {
+    if (m_iLspeed > 0)
+    {
       nState = FORWARD;
-    } else {
+    }
+    else
+    {
       nState = BACKWARD;
     }
     return;
   }
 
   // 电机反向
-  if (m_iLspeed == -m_iRspeed) {
-    if (m_iLspeed > 0) {
+  if (m_iLspeed == -m_iRspeed)
+  {
+    if (m_iLspeed > 0)
+    {
       nState = RIGHT;
-    } else {
+    }
+    else
+    {
       nState = LEFT;
     }
     return;
   }
 
   // 复杂运动模式
-  if (m_iLspeed < m_iRspeed) {
-    if (m_iLspeed + m_iRspeed > 0) {
+  if (m_iLspeed < m_iRspeed)
+  {
+    if (m_iLspeed + m_iRspeed > 0)
+    {
       nState = LEFTFRONT;
-    } else {
+    }
+    else
+    {
       nState = RIGHTBACK;
     }
-  } else {
-    if (m_iLspeed + m_iRspeed > 0) {
+  }
+  else
+  {
+    if (m_iLspeed + m_iRspeed > 0)
+    {
       nState = RIGHTFRONT;
-    } else {
+    }
+    else
+    {
       nState = LEFTBACK;
     }
   }
 }
 
-void CVoyCmd::SetBehavior(IBehavior *pBeh) {
+void CVoyCmd::SetBehavior(IBehavior *pBeh)
+{
   m_pBeh = pBeh;
-  if (m_pBeh != nullptr) {
+  if (m_pBeh != nullptr)
+  {
     m_pBeh->SetCmd(this);
   }
 }
